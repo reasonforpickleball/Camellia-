@@ -1,1 +1,3 @@
-export default function Empty(){return null;}
+export function createPageUrl(pageName: string) {
+    return '/' + pageName.replace(/ /g, '-');
+}
