@@ -1,3 +1,3 @@
 # Camellia-
 
-Repository reset to a blank folder structure with placeholder files.
+Repository reset and placeholder files added per request.
