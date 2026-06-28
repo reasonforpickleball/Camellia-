@@ -1,1 +1,11 @@
-{}
+{
+  "name": "OnboardingCount",
+  "type": "object",
+  "properties": {
+    "count": {
+      "type": "integer",
+      "default": 0
+    }
+  },
+  "required": []
+}
