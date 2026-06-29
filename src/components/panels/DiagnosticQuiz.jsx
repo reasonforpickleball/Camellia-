@@ -262,7 +262,54 @@ export default function DiagnosticQuiz({ ns = 'default', onComplete, onClose }) 
   const pageBg = dark ? 'linear-gradient(135deg, #0d0a12 0%, #120a1e 100%)' : 'linear-gradient(135deg, #FADCD0 0%, #FDF3EE 100%)';
   const borderCol = dark ? 'rgba(90,40,130,0.4)' : 'rgba(200,180,220,0.5)';
 
+  // Pad a question set to 25 by re-using questions in different formats
+  const padQuestions = (valid) => {
+    if (valid.length >= 25) return valid.slice(0, 25).map(shuffleOptions);
+    const padded = [...valid];
+    let i = 0;
+    while (padded.length < 25) {
+      const src = valid[i % valid.length];
+      // Rotate correct answer position to make it feel different
+      const rotated = {
+        ...src,
+        q: src.q,
+        options: [...src.options.slice(1), src.options[0]],
+        correct: src.correct === 0 ? src.options.length - 1 : src.correct - 1,
+      };
+      padded.push(rotated);
+      i++;
+    }
+    return padded.map(shuffleOptions);
+  };
+
+  // Build basic true/false questions from raw text when no AI is available
+  const buildLocalQuestions = (text) => {
+    const sentences = text
+      .split(/[.!?]\s+/)
+      .map(s => s.trim().replace(/\s+/g, ' '))
+      .filter(s => s.length > 30 && s.length < 200 && /[a-zA-Z]{4,}/.test(s));
+    const qs = [];
+    for (let i = 0; i < sentences.length && qs.length < 10; i++) {
+      const stmt = sentences[i];
+      // Distractor: swap a key word with a nearby word
+      const words = stmt.split(' ');
+      if (words.length < 5) continue;
+      const swapIdx = Math.floor(words.length * 0.6);
+      const wrongWords = ['incorrectly', 'never', 'always', 'opposite'];
+      const wrongWord = wrongWords[qs.length % wrongWords.length];
+      const distractorStmt = [...words.slice(0, swapIdx), wrongWord, ...words.slice(swapIdx + 1)].join(' ');
+      qs.push({
+        q: `Which of the following is true according to your material?`,
+        options: [stmt, distractorStmt, `None of the above`, `Both are partially correct`],
+        correct: 0,
+        explanation: `From your notes: "${stmt}"`,
+      });
+    }
+    return qs;
+  };
+
   const generateQuestions = async () => {
+    // Collect raw material across all namespaces
     let rawMaterial = localStorage.getItem(`camellia_${ns}_raw_material`) || '';
     if (!rawMaterial || rawMaterial.length < 50) {
       const allNs = ['default'];
@@ -279,14 +326,38 @@ export default function DiagnosticQuiz({ ns = 'default', onComplete, onClose }) 
         if (m.length > rawMaterial.length) rawMaterial = m;
       }
     }
+
+    // Pre-existing AI questions (from planner generation)
+    const existingQs = (() => {
+      try { return JSON.parse(localStorage.getItem(`camellia_${ns}_ai_questions`) || '[]'); } catch { return []; }
+    })();
+
+    // No material at all
     if (!rawMaterial || rawMaterial.length < 50) {
+      if (existingQs.length >= 5) {
+        setQuestions(padQuestions(existingQs));
+        setCurrent(0); setSelected(null); setResults([]);
+        setPhase('quiz');
+        return;
+      }
       setGenError('No study material found. Upload material in the AI Study Planner tab first.');
       return;
     }
+
+    // If no AI key, build local questions from raw text — always works on first try
     if (!isAIConfigured()) {
-      setGenError('No AI key configured. Go to Settings to add your API key.');
+      const localQs = buildLocalQuestions(rawMaterial);
+      const seed = existingQs.length >= 5 ? [...localQs, ...existingQs] : (localQs.length >= 5 ? localQs : existingQs);
+      if (seed.length >= 3) {
+        setQuestions(padQuestions(seed));
+        setCurrent(0); setSelected(null); setResults([]);
+        setPhase('quiz');
+        return;
+      }
+      setGenError('Add an AI key in Settings for best results, or upload more material.');
       return;
     }
+
     setPhase('loading');
     setGenError('');
     startProgress();
@@ -296,38 +367,37 @@ export default function DiagnosticQuiz({ ns = 'default', onComplete, onClose }) 
         `Generate 25 multiple-choice questions from this material.\n\nMATERIAL:\n${rawMaterial.slice(0, 12000)}\n\nRespond with ONLY a JSON array (no markdown fences, no other text): [{"q":"question","options":["A","B","C","D"],"correct":0,"explanation":"brief explanation"}]`,
         { maxTokens: 5000 }
       );
-      // Robust JSON extraction — find the array even if there's surrounding text
       let parsed = null;
       try { parsed = parseAIJson(raw); } catch {}
       if (!Array.isArray(parsed)) {
         const match = raw.match(/\[[\s\S]*\]/);
         if (match) { try { parsed = JSON.parse(match[0]); } catch {} }
       }
-      const valid = Array.isArray(parsed)
+      let valid = Array.isArray(parsed)
         ? parsed.filter(q => q.q && Array.isArray(q.options) && q.options.length === 4 && typeof q.correct === 'number')
-            .slice(0, 25)
-            .map(shuffleOptions)
         : [];
-      if (valid.length < 5) {
-        finishProgress();
-        setGenError('Could not generate enough questions. Please try again.');
+      if (valid.length < 5 && existingQs.length >= 5) valid = [...valid, ...existingQs];
+      if (valid.length < 5) valid = [...valid, ...buildLocalQuestions(rawMaterial)];
+      finishProgress();
+      if (valid.length < 3) {
+        setGenError('Could not generate enough questions. Please try again or add more material.');
         setPhase('intro');
         return;
       }
-      finishProgress();
-      setQuestions(valid);
-      setCurrent(0);
-      setSelected(null);
-      setResults([]);
+      setQuestions(padQuestions(valid));
+      setCurrent(0); setSelected(null); setResults([]);
       setPhase('quiz');
     } catch (e) {
       finishProgress();
-      const msg = e?.message || String(e) || '';
-      if (msg.includes('credit') || msg.includes('quota') || msg.includes('402') || msg.includes('429')) {
-        setGenError('Integration credits are exhausted for this workspace. Please upgrade your plan or wait for credits to reset.');
-      } else {
-        setGenError('Could not generate questions. Make sure you have study material uploaded and an API key configured in Settings.');
+      // Always fall back — never strand the user on an error screen
+      const fallback = existingQs.length >= 3 ? existingQs : buildLocalQuestions(rawMaterial);
+      if (fallback.length >= 3) {
+        setQuestions(padQuestions(fallback));
+        setCurrent(0); setSelected(null); setResults([]);
+        setPhase('quiz');
+        return;
       }
+      setGenError('Could not generate questions. Please add more study material or configure an AI key in Settings.');
       setPhase('intro');
     }
   };
@@ -414,7 +484,7 @@ export default function DiagnosticQuiz({ ns = 'default', onComplete, onClose }) 
         </div>
 
         {/* Question */}
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '20px 24px', maxWidth: 680, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '28px 24px 24px', maxWidth: 680, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
           <p style={{ fontFamily: FONT, fontWeight: 700, fontSize: '1.2rem', color: textPrimary, lineHeight: 1.4, margin: '0 0 20px', textAlign: 'center' }}>{q.q}</p>
 
           {selected === null ? (
