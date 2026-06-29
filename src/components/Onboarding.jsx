@@ -45,7 +45,8 @@ export default function Onboarding({ onComplete }) {
       try {
         const records = await base44.entities.OnboardingCount.list();
         if (records && records.length > 0) {
-          await base44.entities.OnboardingCount.update(records[0].id, { count: (records[0].count || 0) + 1 });
+          const currentCount = typeof records[0].count === 'number' ? records[0].count : 0;
+          await base44.entities.OnboardingCount.update(records[0].id, { count: currentCount + 1 });
         } else {
           await base44.entities.OnboardingCount.create({ count: 1 });
         }
@@ -177,7 +178,7 @@ export default function Onboarding({ onComplete }) {
   );
 
   if (screen === 5) return (
-    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease', padding: '40px' }}>
+    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease' }}>
       <div style={{ textAlign: 'center', color: 'white', fontFamily: 'Inter', maxWidth: 600 }}>
         <p style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem' }}>Here in Camellia, we have a paywall.</p>
         <p style={{ fontSize: '1rem', fontWeight: 500, marginBottom: '0.4rem' }}>Payment methods: time + complete focus</p>
@@ -218,7 +219,7 @@ export default function Onboarding({ onComplete }) {
           </div>
           <button
             onClick={handleEnterDashboard}
-            style={{ background: '#F3EEF8', color: '#2D1B0E', border: '1.5px solid #ddd', borderRadius: 12, padding: '14px 40px', fontSize: '1.05rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', alignSelf: 'flex-start', transition: 'background 0.2s' }}
+            style={{ background: '#F3EEF8', color: '#2D1B0E', border: '1.5px solid #ddd', borderRadius: 12, padding: '14px 40px', fontSize: '1.05rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', width: 'fit-content' }}
             onMouseEnter={e => e.currentTarget.style.background = '#e8e0f5'}
             onMouseLeave={e => e.currentTarget.style.background = '#F3EEF8'}
           >
