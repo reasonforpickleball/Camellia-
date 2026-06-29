@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CamelliaLogoSmall } from './CamelliaLogo';
 import { base44 } from '@/api/base44Client';
+import { trackAccountCreated, trackClickedPayAndMaybeRedirect } from '@/lib/analytics';
 
 const SCREENS = ['name', 'goal', 'nonneg', 'picture', 'wish', 'paywall', 'aisetup'];
 const ONBOARDING_COUNT_ID = 'camellia_onboarding_global'; // Fixed ID for the single global counter
@@ -22,6 +23,8 @@ export default function Onboarding({ onComplete }) {
   const handleNameEnter = () => {
     if (!name.trim()) return;
     localStorage.setItem('doomium_user_name', name.trim());
+    // analytics: account created
+    try { trackAccountCreated({ method: 'onboarding' }); } catch (e) { /* ignore */ }
     goNext();
   };
 
@@ -40,6 +43,9 @@ export default function Onboarding({ onComplete }) {
   };
 
   const handlePay = async () => {
+    // analytics: clicked pay (best-effort). We call this before Base44 increment so it's attempted even if base44 fails.
+    try { trackClickedPayAndMaybeRedirect(); } catch (e) { /* ignore */ }
+
     // Only count once per browser
     const alreadyCounted = localStorage.getItem('camellia_counted_global');
     if (!alreadyCounted) {
@@ -166,7 +172,7 @@ export default function Onboarding({ onComplete }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '90%' }}>
           <input className="underline-input-sm" placeholder="(ex. study 25 mins at 9pm 6 days a week.)" value={nn1} onChange={e => setNn1(e.target.value)} autoFocus />
           <input className="underline-input-sm" placeholder="(ex. put away my phone from 9-9:25pm.)" value={nn2} onChange={e => setNn2(e.target.value)} />
-          <input className="underline-input-sm" placeholder="(ex. finish all homework on time for a week.)" value={nn3} onChange={e => setNn3(e.target.value)} onKeyDown={e => handleKeyDown(e, handleNnEnter)} />
+          <input className="underline-input-sm" placeholder="(ex. finish all homework on time for a week.)" value={nn3} onChange={e => setNn3(e.target.value)} onKeyDown={e => handleKeyDown(e, han[...]} />
         </div>
         <div style={{ marginTop: 28 }}>
           <button className="enter-btn" onClick={handleNnEnter}>Enter ↵</button>
@@ -179,21 +185,21 @@ export default function Onboarding({ onComplete }) {
   );
 
   if (screen === 3) return (
-    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease' }}>
+    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: visible ? 1 : 0, transition: 'opaci[...'}>
       <p style={{ color: 'white', fontFamily: 'Inter', fontSize: '1rem', fontWeight: 600, marginBottom: '4rem', letterSpacing: '0.02em' }}>Picture yourself when your goal is reached</p>
       <button className="charcoal-pill-btn" onClick={goNext}>done</button>
     </div>
   );
 
   if (screen === 4) return (
-    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease' }}>
+    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: visible ? 1 : 0, transition: 'opaci[...'}>
       <p style={{ color: 'white', fontFamily: 'Inter', fontSize: '1rem', fontWeight: 600, marginBottom: '4rem', letterSpacing: '0.02em' }}>Do you wish it would happen?</p>
       <button className="charcoal-pill-btn" onClick={goNext}>yes</button>
     </div>
   );
 
   if (screen === 5) return (
-    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease' }}>
+    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, opacity: visible ? 1 : 0, transition: 'opaci[...'}>
       <div style={{ textAlign: 'center', color: 'white', fontFamily: 'Inter', maxWidth: 600 }}>
         <p style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem' }}>Here in Camellia, we have a paywall.</p>
         <p style={{ fontSize: '1rem', fontWeight: 500, marginBottom: '0.4rem' }}>Payment methods: time + complete focus</p>
@@ -216,7 +222,7 @@ export default function Onboarding({ onComplete }) {
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, minHeight: 0, overflow: 'hidden' }}>
         {/* Left: instructions */}
         <div style={{ padding: '40px 44px', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.08)', overflowY: 'auto' }}>
-          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 20px' }}>Quick Setup · Under 1 Minute</p>
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 20px' }}>Quick Setup · Under 1 Minu...</p>
           <p style={{ color: 'white', fontSize: '1rem', lineHeight: 1.8, margin: '0 0 24px', fontWeight: 400 }}>
             Look, I know it sounds complicated but this is very simple, takes less than one minute, stay with me.
           </p>
@@ -234,7 +240,7 @@ export default function Onboarding({ onComplete }) {
           </div>
           <button
             onClick={handleEnterDashboard}
-            style={{ background: '#F3EEF8', color: '#2D1B0E', border: '1.5px solid #ddd', borderRadius: 12, padding: '14px 40px', fontSize: '1.05rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', width: 'fit-content' }}
+            style={{ background: '#F3EEF8', color: '#2D1B0E', border: '1.5px solid #ddd', borderRadius: 12, padding: '14px 40px', fontSize: '1.05rem', fontWeight: 500, cursor: 'pointer', fontFami... }}
             onMouseEnter={e => e.currentTarget.style.background = '#e8e0f5'}
             onMouseLeave={e => e.currentTarget.style.background = '#F3EEF8'}
           >
