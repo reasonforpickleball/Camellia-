@@ -3,6 +3,7 @@ import { CamelliaLogoSmall } from './CamelliaLogo';
 import { base44 } from '@/api/base44Client';
 
 const SCREENS = ['name', 'goal', 'nonneg', 'picture', 'wish', 'paywall', 'aisetup'];
+const ONBOARDING_COUNT_ID = 'camellia_onboarding_global'; // Fixed ID for the single global counter
 
 export default function Onboarding({ onComplete }) {
   const [screen, setScreen] = useState(0);
@@ -43,15 +44,29 @@ export default function Onboarding({ onComplete }) {
     const alreadyCounted = localStorage.getItem('camellia_counted_global');
     if (!alreadyCounted) {
       try {
-        const records = await base44.entities.OnboardingCount.list();
-        if (records && records.length > 0) {
-          const currentCount = typeof records[0].count === 'number' ? records[0].count : 0;
-          await base44.entities.OnboardingCount.update(records[0].id, { count: currentCount + 1 });
-        } else {
-          await base44.entities.OnboardingCount.create({ count: 1 });
+        let record = null;
+        
+        // Try to fetch the existing counter record by ID
+        try {
+          record = await base44.entities.OnboardingCount.get(ONBOARDING_COUNT_ID);
+        } catch (e) {
+          // Record doesn't exist yet, we'll create it
+          record = null;
         }
+
+        if (record) {
+          // Record exists, increment it
+          const currentCount = typeof record.count === 'number' ? record.count : 0;
+          await base44.entities.OnboardingCount.update(ONBOARDING_COUNT_ID, { count: currentCount + 1 });
+        } else {
+          // Record doesn't exist, create it with ID and initial count of 1
+          await base44.entities.OnboardingCount.create({ id: ONBOARDING_COUNT_ID, count: 1 });
+        }
+        
         localStorage.setItem('camellia_counted_global', 'true');
-      } catch {}
+      } catch (err) {
+        console.error('Onboarding count error:', err);
+      }
     }
     localStorage.setItem('onboarding_complete', 'true');
     goNext();
