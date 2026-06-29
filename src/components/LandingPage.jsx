@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { CamelliaLogoSmall } from './CamelliaLogo';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { base44 } from '@/api/base44Client';
 import { useDarkMode, DarkModeToggle } from '@/lib/DarkModeContext';
+import { supabase } from '@/lib/supabase';
 
 const FEATURES = [
   { title: 'AI Coach', body: 'Analyze all your upcoming exams and gives you plans, stats, and predicted grades based on how you are doing.' },
@@ -31,7 +31,18 @@ export default function LandingPage({ onCreateAccount }) {
   const isReturning = localStorage.getItem('onboarding_complete') === 'true';
   const isMobile = useIsMobile();
   const { dark, theme } = useDarkMode();
-  const [userCount, setUserCount] = useState(1);
+  const [userCount, setUserCount] = useState(0);
+
+  useEffect(() => {
+    supabase
+      .from('registered_users')
+      .select('user_id')
+      .then(({ data, error }) => {
+        console.log("LANDING DATA:", data, error);
+        const totalUsers = data?.length ?? 0;
+        setUserCount(totalUsers);
+      });
+  }, []);
 
   // Inject animated gradient keyframes once
   React.useEffect(() => {
@@ -65,14 +76,7 @@ export default function LandingPage({ onCreateAccount }) {
     }
   }, []);
 
-  useEffect(() => {
-    // Just read the count — don't increment on visit
-    base44.entities.OnboardingCount.list().then(records => {
-      if (records && records.length > 0) {
-        setUserCount(records[0].count || 1);
-      }
-    }).catch(() => {});
-  }, []);
+
 
   const isRed = theme === 'red';
   const textMain = dark ? (isRed ? '#ffe8e8' : '#f0e6ff') : 'rgba(255,255,255,0.95)';
@@ -123,21 +127,41 @@ export default function LandingPage({ onCreateAccount }) {
       <section style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 40, padding: '60px 60px 40px', alignItems: 'center' }}>
         {/* Left: big text + body */}
         <div>
-          {/* Liquid glass "Trusted by" badge */}
-          <div style={{
-            display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
-            background: dark ? (isRed ? 'rgba(140,20,20,0.4)' : 'rgba(80,20,140,0.4)') : 'rgba(255,200,170,0.55)',
-            backdropFilter: 'blur(20px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(160%)',
-            border: dark ? (isRed ? '1.5px solid rgba(255,80,80,0.5)' : '1.5px solid rgba(180,80,255,0.5)') : '1.5px solid rgba(200,80,40,0.4)',
-            borderRadius: 20,
-            padding: '10px 24px',
-            marginBottom: 20,
-            boxShadow: dark ? (isRed ? '0 4px 20px rgba(200,20,20,0.3)' : '0 4px 20px rgba(120,20,200,0.3)') : '0 4px 20px rgba(200,80,40,0.15)',
-          }}>
-            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '0.75rem', color: dark ? (isRed ? '#ffb0b0' : '#d0b0ff') : '#7B1A2E', fontWeight: 600 }}>Trusted by</span>
-            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '1.6rem', fontWeight: 900, color: dark ? (isRed ? '#ff8888' : '#e8b8ff') : '#7B1A2E', lineHeight: 1.1 }}>{userCount}</span>
-            <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '0.75rem', color: dark ? (isRed ? '#ffb0b0' : '#d0b0ff') : '#7B1A2E', fontWeight: 600 }}>{userCount === 1 ? 'student' : 'students'}</span>
+          {/* Liquid glass "Trusted by" badge + CTA */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+            <div style={{
+              display: 'inline-flex', flexDirection: 'column', alignItems: 'center',
+              background: dark ? (isRed ? 'rgba(140,20,20,0.4)' : 'rgba(80,20,140,0.4)') : 'rgba(255,200,170,0.55)',
+              backdropFilter: 'blur(20px) saturate(160%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+              border: dark ? (isRed ? '1.5px solid rgba(255,80,80,0.5)' : '1.5px solid rgba(180,80,255,0.5)') : '1.5px solid rgba(200,80,40,0.4)',
+              borderRadius: 20,
+              padding: '10px 24px',
+              boxShadow: dark ? (isRed ? '0 4px 20px rgba(200,20,20,0.3)' : '0 4px 20px rgba(120,20,200,0.3)') : '0 4px 20px rgba(200,80,40,0.15)',
+            }}>
+              <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '0.75rem', color: dark ? (isRed ? '#ffb0b0' : '#d0b0ff') : '#7B1A2E', fontWeight: 600 }}>100% free</span>
+              <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '1rem', fontWeight: 900, color: dark ? (isRed ? '#ff8888' : '#e8b8ff') : '#7B1A2E', lineHeight: 1.2, textAlign: 'center' }}>no hidden fees</span>
+              <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '0.75rem', color: dark ? (isRed ? '#ffb0b0' : '#d0b0ff') : '#7B1A2E', fontWeight: 600 }}>ever</span>
+            </div>
+            <button
+              onClick={onCreateAccount}
+              style={{
+                background: 'rgba(123,45,110,0.9)', color: 'white',
+                border: '2px solid rgba(200,130,255,0.4)',
+                borderRadius: 20, padding: '20px 48px',
+                fontSize: '1.35rem', fontWeight: 900, cursor: 'pointer',
+                fontFamily: 'Roboto, sans-serif',
+                boxShadow: '0 8px 32px rgba(123,45,110,0.45)',
+                backdropFilter: 'blur(16px) saturate(160%)',
+                WebkitBackdropFilter: 'blur(16px) saturate(160%)',
+                transition: 'all 0.22s cubic-bezier(0.22,1,0.36,1)',
+                letterSpacing: '0.01em',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px) scale(1.04)'; e.currentTarget.style.boxShadow = '0 16px 40px rgba(123,45,110,0.6)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 8px 32px rgba(123,45,110,0.45)'; }}
+            >
+              {isReturning ? 'Continue Studying ↵' : 'Create a Study Session ↵'}
+            </button>
           </div>
 
           <h1 style={{
@@ -448,6 +472,14 @@ Congrats! You've learned active recall.`}</p>
             <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '0.72rem', color: dark ? '#a080c0' : '#7A6A5A', fontStyle: 'italic', textAlign: 'center', marginTop: 8, maxWidth: 320 }}>
               picture of my desk, and the lovely Chromebook screen I broke during Geo - interested in donating a Mac for me :)
             </p>
+            <img
+              src="https://media.base44.com/images/public/6a36d7f24a9a8c3a2c9b47d9/60c05077f_image.png"
+              alt="random capybara"
+              style={{ width: isMobile ? '100%' : 320, borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.2)', objectFit: 'cover', display: 'block', marginTop: 12 }}
+            />
+            <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '0.72rem', color: dark ? '#a080c0' : '#7A6A5A', fontStyle: 'italic', textAlign: 'center', marginTop: 8, maxWidth: 320 }}>
+              random capybara
+            </p>
           </div>
         </div>
       </section>
@@ -478,7 +510,10 @@ Congrats! You've learned active recall.`}</p>
       {/* FOOTER */}
       <footer style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 60px', background: dark ? 'rgba(0,0,0,0.35)' : 'rgba(90,26,64,0.1)' }}>
         <span style={{ fontSize: '0.85rem', color: dark ? '#d0b0ff' : '#5A1A40', fontWeight: 500, fontFamily: 'Roboto, sans-serif' }}>Camellia 2026, built in Temple City, California</span>
-        <img src={LOGO_NO_TEXT} alt="Camellia" style={{ height: 32, objectFit: 'contain' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <img src={LOGO_NO_TEXT} alt="Camellia" style={{ height: 32, objectFit: 'contain' }} />
+          <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '0.65rem', color: dark ? '#c0a0e0' : '#7b2d6e', fontWeight: 600 }}>{userCount}</span>
+        </div>
         <span style={{ fontSize: '0.85rem', color: dark ? '#d0b0ff' : '#5A1A40', fontWeight: 500, fontFamily: 'Roboto, sans-serif' }}>Make studying tools accessible to all people and backgrounds</span>
       </footer>
     </div>
