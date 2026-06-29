@@ -25,10 +25,23 @@ export function isAIConfigured() {
 
 async function _callOpenAI(messages, config, opts = {}) {
   const model = opts.model || config.model || 'gpt-4o-mini';
+  // If file_urls provided, convert last user message to multimodal content
+  let finalMessages = messages;
+  if (opts.file_urls && opts.file_urls.length > 0) {
+    finalMessages = messages.map((m, i) => {
+      if (m.role === 'user' && i === messages.length - 1) {
+        return { role: 'user', content: [
+          { type: 'text', text: m.content },
+          ...opts.file_urls.map(url => ({ type: 'image_url', image_url: { url } })),
+        ]};
+      }
+      return m;
+    });
+  }
   const resp = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
-    body: JSON.stringify({ model, messages, temperature: opts.temperature ?? 0.7, max_tokens: opts.maxTokens ?? 2000 }),
+    body: JSON.stringify({ model, messages: finalMessages, temperature: opts.temperature ?? 0.7, max_tokens: opts.maxTokens ?? 2000 }),
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
@@ -71,9 +84,14 @@ async function _callAnthropic(messages, config, opts = {}) {
 async function _callGoogle(messages, config, opts = {}) {
   const model = opts.model || config.model || 'gemini-2.5-flash-lite';
   const system = messages.find(m => m.role === 'system')?.content || '';
-  const conv = messages.filter(m => m.role !== 'system').map(m => ({
-    role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }],
-  }));
+  const conv = messages.filter(m => m.role !== 'system').map((m, i, arr) => {
+    const parts = [{ text: m.content }];
+    // Attach images to last user message
+    if (m.role === 'user' && i === arr.length - 1 && opts.file_urls?.length > 0) {
+      opts.file_urls.forEach(url => parts.push({ inlineData: undefined, fileData: { mimeType: 'image/jpeg', fileUri: url } }));
+    }
+    return { role: m.role === 'assistant' ? 'model' : 'user', parts };
+  });
   const body = {
     contents: conv,
     generationConfig: { temperature: opts.temperature ?? 0.7, maxOutputTokens: opts.maxTokens ?? 2000 },
