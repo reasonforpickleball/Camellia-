@@ -163,7 +163,7 @@ export default function CoachTab() {
 
         {/* Row 5: Practice Sets */}
         <div style={{ marginBottom: 16 }}>
-          <PracticeSets sets={practiceSets} dark={dark} />
+          <PracticeSets sets={practiceSets} dark={dark} onSessionComplete={reload} />
         </div>
 
         {/* Row 6: Recent Activity */}
