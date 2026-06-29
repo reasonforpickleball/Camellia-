@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { CamelliaLogoSmall } from './CamelliaLogo';
-import { base44 } from '@/api/base44Client';
-import { trackAccountCreated, trackClickedPayAndMaybeRedirect } from '@/lib/analytics';
+import { supabase } from '@/lib/supabase';
 
 const SCREENS = ['name', 'goal', 'nonneg', 'picture', 'wish', 'paywall', 'aisetup'];
-const ONBOARDING_COUNT_ID = 'camellia_onboarding_global'; // Fixed ID for the single global counter
 
-export default function Onboarding({ onComplete }) {
+export default function Onboarding({ onComplete, onHome }) {
   const [screen, setScreen] = useState(0);
   const [name, setName] = useState('');
   const [goal, setGoal] = useState('');
@@ -23,8 +21,6 @@ export default function Onboarding({ onComplete }) {
   const handleNameEnter = () => {
     if (!name.trim()) return;
     localStorage.setItem('doomium_user_name', name.trim());
-    // analytics: account created
-    try { trackAccountCreated({ method: 'onboarding' }); } catch (e) { /* ignore */ }
     goNext();
   };
 
@@ -43,37 +39,44 @@ export default function Onboarding({ onComplete }) {
   };
 
   const handlePay = async () => {
-    // analytics: clicked pay (best-effort). We call this before Base44 increment so it's attempted even if base44 fails.
-    try { trackClickedPayAndMaybeRedirect(); } catch (e) { /* ignore */ }
+    console.log("HANDLEPAY FIRED");
 
-    // Only count once per browser
-    const alreadyCounted = localStorage.getItem('camellia_counted_global');
-    if (!alreadyCounted) {
-      try {
-        let record = null;
-        
-        // Try to fetch the existing counter record by ID
-        try {
-          record = await base44.entities.OnboardingCount.get(ONBOARDING_COUNT_ID);
-        } catch (e) {
-          // Record doesn't exist yet, we'll create it
-          record = null;
-        }
+    const { data: authData, error: authError } = await supabase.auth.getUser();
 
-        if (record) {
-          // Record exists, increment it
-          const currentCount = typeof record.count === 'number' ? record.count : 0;
-          await base44.entities.OnboardingCount.update(ONBOARDING_COUNT_ID, { count: currentCount + 1 });
-        } else {
-          // Record doesn't exist, create it with ID and initial count of 1
-          await base44.entities.OnboardingCount.create({ id: ONBOARDING_COUNT_ID, count: 1 });
-        }
-        
-        localStorage.setItem('camellia_counted_global', 'true');
-      } catch (err) {
-        console.error('Onboarding count error:', err);
-      }
+    console.log("AUTH RESPONSE:", authData, authError);
+
+    if (authError || !authData?.user?.id) {
+      throw new Error("AUTH FAILED - NO USER ID");
     }
+
+    const userId = authData.user.id;
+
+    const { data, error: insertError } = await supabase
+      .from('registered_users')
+      .upsert(
+        { user_id: userId },
+        { onConflict: 'user_id' }
+      )
+      .select();
+
+    console.log("INSERT RESPONSE:", { data, insertError });
+
+    if (insertError) {
+      throw new Error("INSERT FAILED: " + insertError.message);
+    }
+
+    const { data: verify } = await supabase
+      .from('registered_users')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    console.log("VERIFY INSERT:", verify);
+
+    if (!verify) {
+      console.error("VERIFICATION FAILED: row not found after insert");
+    }
+
     localStorage.setItem('onboarding_complete', 'true');
     goNext();
   };
@@ -103,7 +106,7 @@ export default function Onboarding({ onComplete }) {
       <header style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '12px 24px', background: 'rgba(247,240,232,0.85)', borderBottom: '1px solid rgba(200,180,160,0.3)' }}>
         <CamelliaLogoSmall />
         <nav style={{ display: 'flex', gap: 32, marginLeft: 12 }}>
-          <span style={{ fontFamily: 'Inter', fontSize: '1rem', color: '#4A3525', cursor: 'pointer' }}>Home</span>
+          <span style={{ fontFamily: 'Inter', fontSize: '1rem', color: '#4A3525', cursor: 'pointer' }} onClick={onHome}>Home</span>
           <span style={{ fontFamily: 'Inter', fontSize: '1rem', fontWeight: 700, color: '#1a1a1a', cursor: 'pointer' }}>Create an Account</span>
         </nav>
       </header>
@@ -133,7 +136,7 @@ export default function Onboarding({ onComplete }) {
       <header style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '12px 24px', background: 'rgba(247,240,232,0.85)', borderBottom: '1px solid rgba(200,180,160,0.3)' }}>
         <CamelliaLogoSmall />
         <nav style={{ display: 'flex', gap: 32, marginLeft: 12 }}>
-          <span style={{ fontFamily: 'Inter', fontSize: '1rem', color: '#4A3525', cursor: 'pointer' }}>Home</span>
+          <span style={{ fontFamily: 'Inter', fontSize: '1rem', color: '#4A3525', cursor: 'pointer' }} onClick={onHome}>Home</span>
           <span style={{ fontFamily: 'Inter', fontSize: '1rem', fontWeight: 700, color: '#1a1a1a', cursor: 'pointer' }}>Create an Account</span>
         </nav>
       </header>
@@ -163,7 +166,7 @@ export default function Onboarding({ onComplete }) {
       <header style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '12px 24px', background: 'rgba(247,240,232,0.85)', borderBottom: '1px solid rgba(200,180,160,0.3)' }}>
         <CamelliaLogoSmall />
         <nav style={{ display: 'flex', gap: 32, marginLeft: 12 }}>
-          <span style={{ fontFamily: 'Inter', fontSize: '1rem', color: '#4A3525', cursor: 'pointer' }}>Home</span>
+          <span style={{ fontFamily: 'Inter', fontSize: '1rem', color: '#4A3525', cursor: 'pointer' }} onClick={onHome}>Home</span>
           <span style={{ fontFamily: 'Inter', fontSize: '1rem', fontWeight: 700, color: '#1a1a1a', cursor: 'pointer' }}>Create an Account</span>
         </nav>
       </header>
@@ -172,7 +175,7 @@ export default function Onboarding({ onComplete }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '90%' }}>
           <input className="underline-input-sm" placeholder="(ex. study 25 mins at 9pm 6 days a week.)" value={nn1} onChange={e => setNn1(e.target.value)} autoFocus />
           <input className="underline-input-sm" placeholder="(ex. put away my phone from 9-9:25pm.)" value={nn2} onChange={e => setNn2(e.target.value)} />
-          <input className="underline-input-sm" placeholder="(ex. finish all homework on time for a week.)" value={nn3} onChange={e => setNn3(e.target.value)} onKeyDown={e => handleKeyDown(e, han[...]} />
+          <input className="underline-input-sm" placeholder="(ex. finish all homework on time for a week.)" value={nn3} onChange={e => setNn3(e.target.value)} onKeyDown={e => handleKeyDown(e, handleNnEnter)} />
         </div>
         <div style={{ marginTop: 28 }}>
           <button className="enter-btn" onClick={handleNnEnter}>Enter ↵</button>
@@ -185,21 +188,29 @@ export default function Onboarding({ onComplete }) {
   );
 
   if (screen === 3) return (
-    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: visible ? 1 : 0, transition: 'opaci[...'}>
+    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease' }}>
       <p style={{ color: 'white', fontFamily: 'Inter', fontSize: '1rem', fontWeight: 600, marginBottom: '4rem', letterSpacing: '0.02em' }}>Picture yourself when your goal is reached</p>
       <button className="charcoal-pill-btn" onClick={goNext}>done</button>
     </div>
   );
 
   if (screen === 4) return (
-    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: visible ? 1 : 0, transition: 'opaci[...'}>
+    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease' }}>
       <p style={{ color: 'white', fontFamily: 'Inter', fontSize: '1rem', fontWeight: 600, marginBottom: '4rem', letterSpacing: '0.02em' }}>Do you wish it would happen?</p>
-      <button className="charcoal-pill-btn" onClick={goNext}>yes</button>
+      <button className="charcoal-pill-btn" onClick={async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id) {
+          console.error("User must be authenticated before continuing to pay step");
+          window.location.href = '/login';
+          return;
+        }
+        goNext();
+      }}>yes</button>
     </div>
   );
 
   if (screen === 5) return (
-    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, opacity: visible ? 1 : 0, transition: 'opaci[...'}>
+    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease', padding: '40px' }}>
       <div style={{ textAlign: 'center', color: 'white', fontFamily: 'Inter', maxWidth: 600 }}>
         <p style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem' }}>Here in Camellia, we have a paywall.</p>
         <p style={{ fontSize: '1rem', fontWeight: 500, marginBottom: '0.4rem' }}>Payment methods: time + complete focus</p>
@@ -222,7 +233,7 @@ export default function Onboarding({ onComplete }) {
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, minHeight: 0, overflow: 'hidden' }}>
         {/* Left: instructions */}
         <div style={{ padding: '40px 44px', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.08)', overflowY: 'auto' }}>
-          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 20px' }}>Quick Setup · Under 1 Minu...</p>
+          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 20px' }}>Quick Setup · Under 1 Minute</p>
           <p style={{ color: 'white', fontSize: '1rem', lineHeight: 1.8, margin: '0 0 24px', fontWeight: 400 }}>
             Look, I know it sounds complicated but this is very simple, takes less than one minute, stay with me.
           </p>
@@ -240,7 +251,7 @@ export default function Onboarding({ onComplete }) {
           </div>
           <button
             onClick={handleEnterDashboard}
-            style={{ background: '#F3EEF8', color: '#2D1B0E', border: '1.5px solid #ddd', borderRadius: 12, padding: '14px 40px', fontSize: '1.05rem', fontWeight: 500, cursor: 'pointer', fontFami... }}
+            style={{ background: '#F3EEF8', color: '#2D1B0E', border: '1.5px solid #ddd', borderRadius: 12, padding: '14px 40px', fontSize: '1.05rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', alignSelf: 'flex-start', transition: 'background 0.2s' }}
             onMouseEnter={e => e.currentTarget.style.background = '#e8e0f5'}
             onMouseLeave={e => e.currentTarget.style.background = '#F3EEF8'}
           >
