@@ -662,10 +662,15 @@ export function generatePracticeSets(subjects) {
   const sets = [];
   subjects.forEach(s => {
     const du = daysUntil(s.examDate);
-    const hasContent = s.quizCount > 0 || s.flashcardCount > 0 || s.yuccaGames > 0;
+    const hasContent = s.quizCount > 0 || s.flashcardCount > 0 || s.yuccaGames > 0 ||
+      !!localStorage.getItem(`camellia_${s.ns}_raw_material`);
 
-    if (s.masteryScore < 60 && hasContent) {
+    // Weakness Repair — low mastery
+    if (s.masteryScore < 60) {
       const qCount = Math.max(10, Math.min(25, Math.round(60 - s.masteryScore / 2)));
+      const whyScore = s.quizAccuracy !== null ? ` Your quiz average is ${s.quizAccuracy}%.` : '';
+      const whyTrend = s.quizTrend === 'declining' ? ' Scores have been dropping recently.' : '';
+      const whyErrors = s.recentErrors > 2 ? ` You missed ${s.recentErrors} questions last session.` : '';
       sets.push({
         title: s.name,
         type: 'Weakness Repair',
@@ -674,22 +679,30 @@ export function generatePracticeSets(subjects) {
         color: '#ef4444',
         ns: s.ns,
         canStart: hasContent,
-        reason: `${s.masteryScore}% mastery — targets your weakest areas`,
+        reason: `Your mastery is ${s.masteryScore}% — below passing threshold.${whyScore}${whyTrend}${whyErrors} This set targets your weakest areas to close the gap fast.`,
       });
     }
+
+    // Quick Review — solid mastery, needs spaced repetition
     if (s.masteryScore >= 60) {
+      const forgetsIn = s.forgettingDate ? daysUntil(s.forgettingDate) : null;
+      const whyForget = forgetsIn !== null && forgetsIn <= 7 ? ` You're predicted to forget this material in ${Math.round(Math.max(0, forgetsIn))} days.` : '';
       sets.push({
         title: s.name,
-        type: 'Quick Review',
+        type: 'Spaced Review',
         questions: 15,
         estMins: 12,
         color: '#22c55e',
         ns: s.ns,
         canStart: true,
-        reason: `Spaced review to maintain ${s.masteryScore}% mastery`,
+        reason: `You're at ${s.masteryScore}% mastery — strong, but needs maintenance.${whyForget} This 15-question review locks in retention using spaced repetition.`,
       });
     }
-    if (du !== null && du >= 0 && du <= 14 && hasContent) {
+
+    // Exam Simulation — exam coming up
+    if (du !== null && du >= 0 && du <= 14) {
+      const readinessGap = Math.max(0, 80 - s.masteryScore);
+      const gapMsg = readinessGap > 0 ? ` You need ${readinessGap}% more mastery to hit an A.` : ' You are on track for an A.';
       sets.push({
         title: `${s.name} Exam Sim`,
         type: 'Exam Simulation',
@@ -697,10 +710,12 @@ export function generatePracticeSets(subjects) {
         estMins: 35,
         color: '#7b2d6e',
         ns: s.ns,
-        canStart: s.quizCount > 0,
-        reason: `Exam in ${Math.round(du)} days — simulate full test conditions`,
+        canStart: hasContent,
+        reason: `Your ${s.name} exam is in ${Math.round(du)} day${du !== 1 ? 's' : ''}.${gapMsg} This full 25-question simulation mimics real exam pressure to find final weak spots.`,
       });
     }
+
+    // Speed Challenge — never played Yucca / build fluency
     if (s.yuccaGames === 0 && hasContent) {
       sets.push({
         title: s.name,
@@ -709,8 +724,8 @@ export function generatePracticeSets(subjects) {
         estMins: 10,
         color: '#f59e0b',
         ns: s.ns,
-        canStart: s.flashcardCount > 0,
-        reason: 'Build fluency under time pressure',
+        canStart: hasContent,
+        reason: `You've never done a speed drill on ${s.name}. Timed practice forces instant recall, which is exactly what exams demand. Your ${s.masteryScore}% mastery needs to be fast, not just accurate.`,
       });
     }
   });
