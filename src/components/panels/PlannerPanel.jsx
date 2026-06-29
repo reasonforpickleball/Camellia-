@@ -139,15 +139,41 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
       setStep(0);
       setLoadingStep('Reading your file...');
       try {
-        rawText = await readFileAsText(pendingFile);
-        if (!rawText || rawText.trim().length < 30) {
-          alert('Could not extract readable text from this file. Try a .txt or .pdf with selectable text.');
-          setLoading(false);
-          return;
+        const isImage = pendingFile.type.startsWith('image/');
+        if (isImage) {
+          // Convert to base64 data URL and send directly to the vision model (BYOK, no server)
+          setLoadingStep('Reading handwritten notes with AI vision...');
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(pendingFile);
+          });
+          const transcribed = await aiAsk(
+            `You are an expert at reading handwritten and printed notes. Transcribe ALL text visible in this image completely and accurately. Preserve structure, headings, bullet points, and formatting as much as possible. Include every word you can read.`,
+            `Please transcribe all text from this image of notes.`,
+            { maxTokens: 4000, file_urls: [dataUrl] }
+          );
+          rawText = transcribed;
+          if (!rawText || rawText.trim().length < 20) {
+            alert('Could not read text from this image. Make sure the photo is clear and well-lit.');
+            setLoading(false);
+            return;
+          }
+        } else {
+          rawText = await readFileAsText(pendingFile);
+          if (!rawText || rawText.trim().length < 30) {
+            alert('Could not extract readable text from this file. Try a .txt or .pdf with selectable text.');
+            setLoading(false);
+            return;
+          }
         }
         localStorage.setItem(tk(ns, 'planner_filename'), pendingFile.name);
         localStorage.setItem(tk(ns, 'planner_goal'), goal);
-        localStorage.setItem(tk(ns, 'raw_material'), rawText);
+        const storeText = rawText.length > 500000
+          ? rawText.slice(0, 200000) + '\n\n[...]\n\n' + rawText.slice(Math.floor(rawText.length / 2) - 50000, Math.floor(rawText.length / 2) + 50000) + '\n\n[...]\n\n' + rawText.slice(-200000)
+          : rawText;
+        localStorage.setItem(tk(ns, 'raw_material'), storeText);
       } catch (err) {
         alert('Error reading file: ' + err.message);
         setLoading(false);
@@ -160,7 +186,15 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
     }
 
     const goalCtx = goal.trim() ? `\nStudent goal: "${goal}"` : '';
-    const truncated = rawText.slice(0, 14000);
+    // For large files, sample intelligently: take beginning, middle, and end chunks
+    const chunkSize = 4500;
+    let truncated;
+    if (rawText.length <= chunkSize * 3) {
+      truncated = rawText.slice(0, 14000);
+    } else {
+      const mid = Math.floor(rawText.length / 2);
+      truncated = rawText.slice(0, chunkSize) + '\n\n[...middle section...]\n\n' + rawText.slice(mid - chunkSize / 2, mid + chunkSize / 2) + '\n\n[...later section...]\n\n' + rawText.slice(-chunkSize);
+    }
     const studyCtx = `\nStudent has ${hoursPerDay} hours per day and ${daysUntilTest} days until the test. Total available: ${hoursPerDay * daysUntilTest} hours.`;
 
     try {
@@ -378,7 +412,7 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
         >
           <input ref={fileRef} type="file" accept=".txt,.pdf,.md,.doc,.docx,text/plain,application/pdf,image/*" style={{ display: 'none' }} onChange={handleFileInput} />
           <button style={{ background: '#1a1a1a', color: 'white', border: 'none', borderRadius: 8, padding: '8px 18px', fontFamily: FONT, fontSize: '0.9rem', cursor: 'pointer', pointerEvents: 'none' }}>Add File</button>
-          <p style={{ fontFamily: FONT, fontSize: '0.82rem', color: '#9A8A7A', marginTop: 8 }}>Drag it here, .txt, .pdf, .md, images, any text file</p>
+          <p style={{ fontFamily: FONT, fontSize: '0.82rem', color: '#9A8A7A', marginTop: 8 }}>Drag here: .txt, .pdf, .md, or a photo of handwritten notes</p>
           {fileName && <p style={{ fontFamily: FONT, fontSize: '0.78rem', color: '#7b2d6e', marginTop: 4 }}>File ready: {fileName}</p>}
           {fileName && <p onClick={e => { e.stopPropagation(); removeFile(); }} style={{ position: 'absolute', bottom: 10, right: 14, fontFamily: FONT, fontSize: '0.75rem', color: '#7b2d6e', cursor: 'pointer', textDecoration: 'underline' }}>remove file</p>}
         </div>
