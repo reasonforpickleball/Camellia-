@@ -36,7 +36,7 @@ function DoomiumApp() {
     return <LandingPage onCreateAccount={handleCreateAccount} />;
   }
   if (screen === 'onboarding') {
-    return <Onboarding onComplete={handleOnboardingComplete} />;
+    return <Onboarding onComplete={handleOnboardingComplete} onHome={() => setScreen('landing')} />;
   }
   return <Dashboard />;
 }
