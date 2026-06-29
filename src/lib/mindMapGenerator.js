@@ -45,35 +45,35 @@ export function generateMindMap(rawText) {
   }
 
   const cleaned = cleanMetadata(rawText);
+  const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
 
   // Central node: first heading or first meaningful line
-  const headingLine = cleaned.split('\n').map(l => l.trim()).find(l =>
-    l.length > 4 && l.length < 80 && /^#{1,3}\s+/.test(l)
-  );
-  const firstLine = headingLine || cleaned.split('\n').map(l => l.trim()).find(l => l.length > 5 && !/^\d/.test(l)) || 'Main Topic';
+  const headingLine = lines.find(l => l.length > 4 && l.length < 80 && /^#{1,3}\s+/.test(l));
+  const firstLine = headingLine || lines.find(l => l.length > 5 && !/^\d/.test(l)) || 'Main Topic';
   const central = firstLine.replace(/^[#\-*>]+\s*/, '').split(/[,;:—]/)[0].trim().slice(0, 40);
 
-  let sections = extractSections(cleaned);
+  let sections = [];
+  try { sections = extractSections(cleaned) || []; } catch {}
 
   // Fallback: split by paragraphs
   if (!sections || sections.length < 2) {
     const paras = cleaned.split(/\n{2,}/).map(p => p.trim()).filter(p => p.length > 40);
     if (paras.length >= 2) {
       sections = paras.slice(0, 8).map((p, i) => {
-        // Use the first complete sentence as the header
-        const firstSentence = p.split(/(?<=[.!?])\s+/)[0] || p;
+        const firstSentence = p.split(/[.!?]\s+/)[0] || p;
         const header = extractLabel(firstSentence) || `Topic ${i + 1}`;
         return { id: `branch_${i}`, header, content: [p] };
       });
-    } else {
-      // Last resort: split by sentences grouped into chunks of 4
-      const sentences = cleaned.match(/[^.!?]+[.!?]+/g)?.map(s => s.trim()).filter(s => s.length > 20) || [];
-      sections = [];
-      for (let i = 0; i < sentences.length && sections.length < 8; i += 4) {
-        const chunk = sentences.slice(i, i + 4);
-        const header = extractLabel(chunk[0]) || `Topic ${sections.length + 1}`;
-        sections.push({ id: `branch_${sections.length}`, header, content: chunk.slice(1) });
-      }
+    }
+  }
+
+  // Last resort: group every 5 lines into a branch
+  if (!sections || sections.length < 2) {
+    sections = [];
+    for (let i = 0; i < lines.length && sections.length < 8; i += 5) {
+      const chunk = lines.slice(i, i + 5);
+      const header = extractLabel(chunk[0]) || `Topic ${sections.length + 1}`;
+      sections.push({ id: `branch_${sections.length}`, header, content: chunk.slice(1) });
     }
   }
 
