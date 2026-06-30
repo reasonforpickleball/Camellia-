@@ -404,12 +404,14 @@ Congrats! You've learned active recall.`}</p>
         </button>
       </section>
 
-      {/* FOOTER */}
-      <footer style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 60px', background: dark ? 'rgba(0,0,0,0.35)' : 'rgba(90,26,64,0.1)' }}>
+         {/* FOOTER */}
+      <footer style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 60px', background: dark ? 'rgba(0,0,0,0.35)' : 'rgba(90,26,64,0.1)', borderTop: dark ? (isRed ? '1px solid rgba(180,40,40,0.2)' : '1px solid rgba(90,40,130,0.2)') : '1px solid rgba(200,100,50,0.2)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <span style={{ fontSize: '0.85rem', color: dark ? '#d0b0ff' : '#5A1A40', fontWeight: 500, fontFamily: 'Roboto, sans-serif' }}>Camellia 2026, built in Temple City, California</span>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <img src={LOGO_NO_TEXT} alt="Camellia" style={{ height: 32, objectFit: 'contain' }} />
-          <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '0.65rem', color: dark ? '#c0a0e0' : '#7b2d6e', fontWeight: 600 }}>{userCount}</span>
         </div>
-        <span style={{ fontSize: '0.85rem', color: dark ? '#d0b0ff' : '#5A1A40', fontWeight: 500, fontFamily: 'Roboto, sans-serif' }}>Make studying tools accessible to all people and backgrounds</span>
-        }
+        <span style={{ fontSize: '0.85rem', color: dark ? '#d0b0ff' : '#5A1A40', fontWeight: 500, fontFamily: 'Roboto, sans-serif' }}>Make studying tools accessible to all</span>
+      </footer>
+    </div>
+  );
+}
