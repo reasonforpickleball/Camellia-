@@ -87,14 +87,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useDarkMode, DarkModeToggle } from '@/lib/DarkModeContext';
 import { supabase } from '@/lib/supabase';
 
-const FEATURES = [
-  { title: 'AI Coach', body: 'Analyze all your upcoming exams and gives you plans, stats, and predicted grades based on how you are doing.' },
-  { title: 'AI Planner', body: 'Upload notes files to generate detailed study schedules.' },
-  { title: 'Flashcards', body: 'AI generates flashcards about your topic for you to increase your readiness.' },
-  { title: 'Ask Camellia', body: 'A built-in AI assistant that knows your notes and everything outside your notes to help you answer any questions you might have.' },
-  { title: 'Yucca!', body: 'Educational dopamine to replace doomscrolling while actively and actually learning.' },
-];
-
 // Comparison table rows
 const COMPARE = [
   'Stop Doomscrolling and Distractions',
