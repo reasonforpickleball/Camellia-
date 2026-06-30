@@ -105,15 +105,6 @@ const LOGO_ICON = 'https://media.base44.com/images/public/6a36d7f24a9a8c3a2c9b47
   const { dark, theme } = useDarkMode();
 
   useEffect(() => {
-    supabase
-      .from('registered_users')
-      .select('user_id')
-      .then(({ data, error }) => {
-        console.log("LANDING DATA:", data, error);
-        const totalUsers = data?.length ?? 0;
-        setUserCount(totalUsers);
-      });
-  }, []);
 
   // Inject animated gradient keyframes once
   React.useEffect(() => {
