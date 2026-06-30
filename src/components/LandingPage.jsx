@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { CamelliaLogoSmall } from './CamelliaLogo';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDarkMode, DarkModeToggle } from '@/lib/DarkModeContext';
-import { supabase } from '@/lib/supabase';
 
 const FEATURES = [
   { title: 'AI Coach', body: 'Analyze all your upcoming exams and gives you plans, stats, and predicted grades based on how you are doing.' },
@@ -31,18 +30,6 @@ export default function LandingPage({ onCreateAccount }) {
   const isReturning = localStorage.getItem('onboarding_complete') === 'true';
   const isMobile = useIsMobile();
   const { dark, theme } = useDarkMode();
-  const [userCount, setUserCount] = useState(0);
-
-  useEffect(() => {
-    supabase
-      .from('registered_users')
-      .select('user_id')
-      .then(({ data, error }) => {
-        console.log("LANDING DATA:", data, error);
-        const totalUsers = data?.length ?? 0;
-        setUserCount(totalUsers);
-      });
-  }, []);
 
   // Inject animated gradient keyframes once
   React.useEffect(() => {
@@ -512,7 +499,6 @@ Congrats! You've learned active recall.`}</p>
         <span style={{ fontSize: '0.85rem', color: dark ? '#d0b0ff' : '#5A1A40', fontWeight: 500, fontFamily: 'Roboto, sans-serif' }}>Camellia 2026, built in Temple City, California</span>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <img src={LOGO_NO_TEXT} alt="Camellia" style={{ height: 32, objectFit: 'contain' }} />
-          <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '0.65rem', color: dark ? '#c0a0e0' : '#7b2d6e', fontWeight: 600 }}>{userCount}</span>
         </div>
         <span style={{ fontSize: '0.85rem', color: dark ? '#d0b0ff' : '#5A1A40', fontWeight: 500, fontFamily: 'Roboto, sans-serif' }}>Make studying tools accessible to all people and backgrounds</span>
       </footer>
