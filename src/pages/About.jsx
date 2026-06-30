@@ -414,5 +414,3 @@ Congrats! You've learned active recall.`}</p>
         <span style={{ fontSize: '0.85rem', color: dark ? '#d0b0ff' : '#5A1A40', fontWeight: 500, fontFamily: 'Roboto, sans-serif' }}>Make studying tools accessible to all people and backgrounds</span>
       </footer>
     </div>
-  );
-}
