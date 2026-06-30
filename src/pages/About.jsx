@@ -102,11 +102,7 @@ const LOGO_WITH_TEXT = 'https://media.base44.com/images/public/6a36d7f24a9a8c3a2
 const LOGO_NO_TEXT = 'https://media.base44.com/images/public/6a36d7f24a9a8c3a2c9b47d9/73e5dfbbe_2.png';   // flower only (small)
 const LOGO_ICON = 'https://media.base44.com/images/public/6a36d7f24a9a8c3a2c9b47d9/c2cb1a65a_1.png';     // yellow icon
 
-export default function LandingPage({ onCreateAccount }) {
-  const isReturning = localStorage.getItem('onboarding_complete') === 'true';
-  const isMobile = useIsMobile();
   const { dark, theme } = useDarkMode();
-  const [userCount, setUserCount] = useState(0);
 
   useEffect(() => {
     supabase
