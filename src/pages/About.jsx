@@ -1,4 +1,4 @@
-```jsx id="wlfbrt"
+```jsx id="ojrkhw"
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -27,7 +27,11 @@ const FEATURES = [
 export default function About() {
   const isMobile = useIsMobile();
 
-  const { dark, theme } = useDarkMode();
+  const darkMode = useDarkMode();
+
+  const dark = darkMode?.dark || false;
+
+  const theme = darkMode?.theme || 'default';
 
   const isRed = theme === 'red';
 
@@ -66,34 +70,31 @@ export default function About() {
         minHeight: '100vh',
         overflowX: 'hidden',
         fontFamily: 'Inter, sans-serif',
-        background: backgroundColor,
-        backgroundImage: dark
-          ? 'radial-gradient(circle at top left, rgba(140,80,255,0.2), transparent 40%)'
-          : 'radial-gradient(circle at top left, rgba(255,180,140,0.35), transparent 40%)',
+        backgroundColor: backgroundColor,
+        paddingBottom: '40px',
       }}
     >
-      {/* HEADER */}
       <header
         style={{
           position: 'sticky',
-          top: 0,
+          top: '0',
           zIndex: 50,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: isMobile ? '16px' : '18px 36px',
-          backdropFilter: 'blur(16px)',
-          background: dark
+          backgroundColor: dark
             ? 'rgba(10,10,20,0.55)'
             : 'rgba(255,255,255,0.45)',
-          borderBottom: `1px solid ${borderColor}`,
+          backdropFilter: 'blur(16px)',
+          borderBottom: '1px solid ' + borderColor,
         }}
       >
         <img
           src={LOGO_WITH_TEXT}
           alt="Camellia"
           style={{
-            height: isMobile ? 38 : 46,
+            height: isMobile ? '38px' : '46px',
             objectFit: 'contain',
           }}
         />
@@ -102,7 +103,7 @@ export default function About() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: isMobile ? 12 : 20,
+            gap: isMobile ? '12px' : '20px',
           }}
         >
           <Link
@@ -142,77 +143,74 @@ export default function About() {
         </nav>
       </header>
 
-      {/* HERO */}
       <section
         style={{
-          padding: isMobile ? '80px 20px' : '120px 60px',
+          padding: isMobile
+            ? '70px 20px'
+            : '110px 60px',
           textAlign: 'center',
         }}
       >
         <h1
           style={{
-            fontSize: 'clamp(3rem, 10vw, 6rem)',
-            lineHeight: 0.9,
+            fontSize: isMobile ? '3rem' : '5.5rem',
+            lineHeight: 1,
             fontWeight: 900,
             color: accentColor,
-            marginBottom: 28,
+            marginBottom: '24px',
           }}
         >
-          study smarter
+          Study Smarter
           <br />
-          not longer
+          Not Longer
         </h1>
 
         <p
           style={{
-            maxWidth: 760,
+            maxWidth: '760px',
             margin: '0 auto',
-            fontSize: '1.08rem',
+            fontSize: '1.1rem',
             lineHeight: 1.9,
             color: textColor,
           }}
         >
-          Camellia combines focus tools, AI study systems,
-          and distraction prevention into one modern learning
-          platform designed for students.
+          Camellia combines AI-powered learning tools,
+          focus systems, and memory techniques into one
+          modern platform designed to help students study
+          effectively without distractions.
         </p>
       </section>
 
-      {/* FEATURES */}
       <section
         style={{
-          padding: isMobile ? '40px 20px' : '60px',
+          padding: isMobile ? '30px 20px' : '50px 60px',
         }}
       >
         <div
           style={{
-            maxWidth: 1100,
+            maxWidth: '1100px',
             margin: '0 auto',
             display: 'grid',
             gridTemplateColumns: isMobile
               ? '1fr'
-              : 'repeat(2, 1fr)',
-            gap: 24,
+              : '1fr 1fr',
+            gap: '24px',
           }}
         >
           {FEATURES.map((feature) => (
             <div
               key={feature}
               style={{
-                background: cardBackground,
-                border: `1px solid ${borderColor}`,
-                borderRadius: 20,
-                padding: 26,
-                backdropFilter: 'blur(14px)',
-                boxShadow: dark
-                  ? '0 10px 30px rgba(0,0,0,0.4)'
-                  : '0 10px 30px rgba(0,0,0,0.08)',
+                backgroundColor: cardBackground,
+                border: '1px solid ' + borderColor,
+                borderRadius: '20px',
+                padding: '26px',
               }}
             >
               <h3
                 style={{
                   marginTop: 0,
-                  marginBottom: 12,
+                  marginBottom: '12px',
                   color: accentColor,
                   fontSize: '1.2rem',
                 }}
@@ -227,41 +225,40 @@ export default function About() {
                   color: textColor,
                 }}
               >
-                Designed to improve retention, focus, and
-                study efficiency while reducing distractions.
+                Built to improve focus, retention, and
+                study efficiency while keeping everything
+                inside one workspace.
               </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ABOUT */}
       <section
         style={{
-          padding: isMobile ? '40px 20px' : '80px 60px',
+          padding: isMobile ? '40px 20px' : '70px 60px',
         }}
       >
         <div
           style={{
-            maxWidth: 980,
+            maxWidth: '980px',
             margin: '0 auto',
-            background: cardBackground,
-            border: `1px solid ${borderColor}`,
-            borderRadius: 24,
-            padding: isMobile ? 28 : 48,
-            backdropFilter: 'blur(16px)',
+            backgroundColor: cardBackground,
+            border: '1px solid ' + borderColor,
+            borderRadius: '24px',
+            padding: isMobile ? '28px' : '48px',
           }}
         >
           <h2
             style={{
               marginTop: 0,
-              marginBottom: 24,
+              marginBottom: '24px',
               color: accentColor,
-              fontSize: 'clamp(2rem, 5vw, 4rem)',
+              fontSize: isMobile ? '2rem' : '4rem',
               fontWeight: 900,
             }}
           >
-            why camellia?
+            Why Camellia?
           </h2>
 
           <p
@@ -271,11 +268,11 @@ export default function About() {
               fontSize: '1rem',
             }}
           >
-            Camellia was created to help students stay
-            focused while studying. Instead of juggling
-            multiple apps for planning, notes, quizzes,
-            flashcards, and AI tools, everything exists in
-            one distraction-resistant workspace.
+            Camellia was built to eliminate the chaos of
+            using multiple disconnected study apps.
+            Instead of switching between flashcards,
+            planners, AI tools, and notes, students can
+            work inside one focused environment.
           </p>
 
           <p
@@ -285,64 +282,50 @@ export default function About() {
               fontSize: '1rem',
             }}
           >
-            The platform also supports BYOK (Bring Your Own
-            Key), allowing students to connect their own AI
-            providers like OpenAI, Anthropic, Groq, or
-            Google AI while keeping keys stored locally in
-            the browser.
+            The platform supports BYOK (Bring Your Own
+            Key), allowing users to connect OpenAI,
+            Anthropic, Groq, or Google AI safely while
+            keeping API keys stored locally in the browser.
           </p>
         </div>
       </section>
 
-      {/* CTA */}
       <section
         style={{
-          padding: '70px 20px 100px',
+          padding: '60px 20px 90px',
           textAlign: 'center',
         }}
       >
         <button
           onClick={onCreateAccount}
           style={{
-            background: accentColor,
+            backgroundColor: accentColor,
             color: 'white',
             border: 'none',
-            borderRadius: 18,
+            borderRadius: '18px',
             padding: isMobile
-              ? '16px 36px'
-              : '18px 64px',
-            fontSize: '1.08rem',
+              ? '16px 34px'
+              : '18px 60px',
+            fontSize: '1.05rem',
             fontWeight: 800,
             cursor: 'pointer',
-            transition: '0.2s ease',
-            boxShadow:
-              '0 14px 36px rgba(123,45,110,0.35)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform =
-              'translateY(-2px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform =
-              'translateY(0)';
           }}
         >
           {isReturning
-            ? 'Continue Studying ↵'
-            : 'Create a Study Session ↵'}
+            ? 'Continue Studying'
+            : 'Create a Study Session'}
         </button>
       </section>
 
-      {/* FOOTER */}
       <footer
         style={{
           padding: isMobile ? '24px 20px' : '28px 60px',
-          borderTop: `1px solid ${borderColor}`,
+          borderTop: '1px solid ' + borderColor,
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
           justifyContent: 'space-between',
           alignItems: 'center',
-          gap: 16,
+          gap: '16px',
         }}
       >
         <span
@@ -356,9 +339,9 @@ export default function About() {
 
         <img
           src={LOGO_NO_TEXT}
-          alt="Camellia Logo"
+          alt="Camellia"
           style={{
-            height: 34,
+            height: '34px',
           }}
         />
 
