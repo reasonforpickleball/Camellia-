@@ -1,4 +1,4 @@
-```jsx
+```jsx id="wlfbrt"
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -37,10 +37,16 @@ export default function About() {
     ? '#c77dff'
     : '#7b2d6e';
 
-  const textColor = dark ? '#f5ecff' : '#3A1020';
+  const textColor = dark ? '#f3ecff' : '#3A1020';
+
+  const backgroundColor = isRed
+    ? '#120508'
+    : dark
+    ? '#120a1e'
+    : '#f7dfd3';
 
   const cardBackground = dark
-    ? 'rgba(20, 12, 32, 0.85)'
+    ? 'rgba(25,18,38,0.88)'
     : 'rgba(255,255,255,0.92)';
 
   const borderColor = dark
@@ -54,108 +60,32 @@ export default function About() {
     window.location.href = '/signup';
   };
 
-  React.useEffect(() => {
-    const styleId = 'camellia-about-page-styles';
-
-    if (document.getElementById(styleId)) return;
-
-    const style = document.createElement('style');
-
-    style.id = styleId;
-
-    style.innerHTML = `
-      @keyframes bgShift {
-        0% {
-          background-position: 0% 50%;
-        }
-
-        50% {
-          background-position: 100% 50%;
-        }
-
-        100% {
-          background-position: 0% 50%;
-        }
-      }
-
-      .camellia-light {
-        background:
-          linear-gradient(
-            135deg,
-            #FADCD0,
-            #F5C9B0,
-            #E8B890,
-            #F0A080,
-            #D4AB80
-          );
-
-        background-size: 300% 300%;
-        animation: bgShift 12s ease infinite;
-      }
-
-      .camellia-dark {
-        background:
-          linear-gradient(
-            135deg,
-            #0d0a12,
-            #1a0830,
-            #120a1e,
-            #2a0a40,
-            #0a0814
-          );
-
-        background-size: 400% 400%;
-        animation: bgShift 15s ease infinite;
-      }
-
-      .camellia-red {
-        background:
-          linear-gradient(
-            135deg,
-            #120508,
-            #2e0808,
-            #1e0505,
-            #3d0a0a,
-            #0a0204
-          );
-
-        background-size: 400% 400%;
-        animation: bgShift 15s ease infinite;
-      }
-    `;
-
-    document.head.appendChild(style);
-  }, []);
-
-  const backgroundClass = isRed
-    ? 'camellia-red'
-    : dark
-    ? 'camellia-dark'
-    : 'camellia-light';
-
   return (
     <div
-      className={backgroundClass}
       style={{
         minHeight: '100vh',
         overflowX: 'hidden',
         fontFamily: 'Inter, sans-serif',
+        background: backgroundColor,
+        backgroundImage: dark
+          ? 'radial-gradient(circle at top left, rgba(140,80,255,0.2), transparent 40%)'
+          : 'radial-gradient(circle at top left, rgba(255,180,140,0.35), transparent 40%)',
       }}
     >
       {/* HEADER */}
       <header
         style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: isMobile ? '16px' : '18px 36px',
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
-          backdropFilter: 'blur(18px)',
+          backdropFilter: 'blur(16px)',
           background: dark
-            ? 'rgba(10,10,20,0.45)'
-            : 'rgba(255,255,255,0.3)',
+            ? 'rgba(10,10,20,0.55)'
+            : 'rgba(255,255,255,0.45)',
           borderBottom: `1px solid ${borderColor}`,
         }}
       >
@@ -171,8 +101,8 @@ export default function About() {
         <nav
           style={{
             display: 'flex',
-            gap: isMobile ? 12 : 20,
             alignItems: 'center',
+            gap: isMobile ? 12 : 20,
           }}
         >
           <Link
@@ -215,15 +145,15 @@ export default function About() {
       {/* HERO */}
       <section
         style={{
-          padding: isMobile ? '70px 20px' : '120px 60px',
+          padding: isMobile ? '80px 20px' : '120px 60px',
           textAlign: 'center',
         }}
       >
         <h1
           style={{
             fontSize: 'clamp(3rem, 10vw, 6rem)',
-            fontWeight: 900,
             lineHeight: 0.9,
+            fontWeight: 900,
             color: accentColor,
             marginBottom: 28,
           }}
@@ -235,17 +165,16 @@ export default function About() {
 
         <p
           style={{
-            maxWidth: 780,
+            maxWidth: 760,
             margin: '0 auto',
-            fontSize: '1.1rem',
+            fontSize: '1.08rem',
             lineHeight: 1.9,
             color: textColor,
           }}
         >
-          Camellia is an AI-powered study platform built to
-          stop distractions, improve memory retention, and
-          combine powerful evidence-based learning systems
-          into one workspace.
+          Camellia combines focus tools, AI study systems,
+          and distraction prevention into one modern learning
+          platform designed for students.
         </p>
       </section>
 
@@ -257,13 +186,13 @@ export default function About() {
       >
         <div
           style={{
+            maxWidth: 1100,
+            margin: '0 auto',
             display: 'grid',
             gridTemplateColumns: isMobile
               ? '1fr'
               : 'repeat(2, 1fr)',
             gap: 24,
-            maxWidth: 1100,
-            margin: '0 auto',
           }}
         >
           {FEATURES.map((feature) => (
@@ -273,13 +202,17 @@ export default function About() {
                 background: cardBackground,
                 border: `1px solid ${borderColor}`,
                 borderRadius: 20,
-                padding: 24,
-                backdropFilter: 'blur(16px)',
+                padding: 26,
+                backdropFilter: 'blur(14px)',
+                boxShadow: dark
+                  ? '0 10px 30px rgba(0,0,0,0.4)'
+                  : '0 10px 30px rgba(0,0,0,0.08)',
               }}
             >
               <h3
                 style={{
-                  margin: 0,
+                  marginTop: 0,
+                  marginBottom: 12,
                   color: accentColor,
                   fontSize: '1.2rem',
                 }}
@@ -289,13 +222,13 @@ export default function About() {
 
               <p
                 style={{
-                  marginTop: 12,
-                  color: textColor,
+                  margin: 0,
                   lineHeight: 1.7,
+                  color: textColor,
                 }}
               >
-                Powerful tools designed to help students
-                retain information faster and stay focused.
+                Designed to improve retention, focus, and
+                study efficiency while reducing distractions.
               </p>
             </div>
           ))}
@@ -310,21 +243,22 @@ export default function About() {
       >
         <div
           style={{
-            maxWidth: 1000,
+            maxWidth: 980,
             margin: '0 auto',
             background: cardBackground,
             border: `1px solid ${borderColor}`,
             borderRadius: 24,
-            padding: isMobile ? 28 : 50,
+            padding: isMobile ? 28 : 48,
             backdropFilter: 'blur(16px)',
           }}
         >
           <h2
             style={{
-              fontSize: 'clamp(2rem, 5vw, 4rem)',
-              color: accentColor,
               marginTop: 0,
               marginBottom: 24,
+              color: accentColor,
+              fontSize: 'clamp(2rem, 5vw, 4rem)',
+              fontWeight: 900,
             }}
           >
             why camellia?
@@ -337,12 +271,11 @@ export default function About() {
               fontSize: '1rem',
             }}
           >
-            Camellia was created to solve a problem most
-            students experience every day: endless
-            distractions while studying. Instead of using
-            separate apps for notes, flashcards, quizzes,
-            and planning, Camellia combines everything into
-            one focused environment powered by AI.
+            Camellia was created to help students stay
+            focused while studying. Instead of juggling
+            multiple apps for planning, notes, quizzes,
+            flashcards, and AI tools, everything exists in
+            one distraction-resistant workspace.
           </p>
 
           <p
@@ -354,8 +287,9 @@ export default function About() {
           >
             The platform also supports BYOK (Bring Your Own
             Key), allowing students to connect their own AI
-            provider while keeping API keys stored locally
-            in the browser.
+            providers like OpenAI, Anthropic, Groq, or
+            Google AI while keeping keys stored locally in
+            the browser.
           </p>
         </div>
       </section>
@@ -363,7 +297,7 @@ export default function About() {
       {/* CTA */}
       <section
         style={{
-          padding: '60px 20px 100px',
+          padding: '70px 20px 100px',
           textAlign: 'center',
         }}
       >
@@ -377,12 +311,12 @@ export default function About() {
             padding: isMobile
               ? '16px 36px'
               : '18px 64px',
-            fontSize: '1.1rem',
+            fontSize: '1.08rem',
             fontWeight: 800,
             cursor: 'pointer',
+            transition: '0.2s ease',
             boxShadow:
               '0 14px 36px rgba(123,45,110,0.35)',
-            transition: 'transform 0.2s ease',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform =
@@ -390,7 +324,7 @@ export default function About() {
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform =
-              'translateY(0px)';
+              'translateY(0)';
           }}
         >
           {isReturning
@@ -406,10 +340,9 @@ export default function About() {
           borderTop: `1px solid ${borderColor}`,
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
-          gap: 16,
-          alignItems: 'center',
           justifyContent: 'space-between',
-          backdropFilter: 'blur(12px)',
+          alignItems: 'center',
+          gap: 16,
         }}
       >
         <span
