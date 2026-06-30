@@ -134,11 +134,7 @@ const LOGO_ICON = 'https://media.base44.com/images/public/6a36d7f24a9a8c3a2c9b47
           animation: bgShift 15s ease infinite;
         }
       `;
-      document.head.appendChild(s);
-    }
-  }, []);
-
-
+     
 
   const isRed = theme === 'red';
   const textMain = dark ? (isRed ? '#ffe8e8' : '#f0e6ff') : 'rgba(255,255,255,0.95)';
