@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { CamelliaLogoSmall } from './CamelliaLogo';
-import { supabase } from '@/lib/supabase';
 
 const SCREENS = ['name', 'goal', 'nonneg', 'picture', 'wish', 'paywall', 'aisetup'];
 
@@ -38,45 +37,10 @@ export default function Onboarding({ onComplete, onHome }) {
     goNext();
   };
 
+  // Supabase removed: perform a local no-op pay flow that marks onboarding complete.
   const handlePay = async () => {
-    console.log("HANDLEPAY FIRED");
-
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-
-    console.log("AUTH RESPONSE:", authData, authError);
-
-    if (authError || !authData?.user?.id) {
-      throw new Error("AUTH FAILED - NO USER ID");
-    }
-
-    const userId = authData.user.id;
-
-    const { data, error: insertError } = await supabase
-      .from('registered_users')
-      .upsert(
-        { user_id: userId },
-        { onConflict: 'user_id' }
-      )
-      .select();
-
-    console.log("INSERT RESPONSE:", { data, insertError });
-
-    if (insertError) {
-      throw new Error("INSERT FAILED: " + insertError.message);
-    }
-
-    const { data: verify } = await supabase
-      .from('registered_users')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    console.log("VERIFY INSERT:", verify);
-
-    if (!verify) {
-      console.error("VERIFICATION FAILED: row not found after insert");
-    }
-
+    console.log('HANDLEPAY FIRED (no Supabase)');
+    // If you want to require a login flow, implement it elsewhere. For now, mark onboarding complete.
     localStorage.setItem('onboarding_complete', 'true');
     goNext();
   };
@@ -197,20 +161,12 @@ export default function Onboarding({ onComplete, onHome }) {
   if (screen === 4) return (
     <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease' }}>
       <p style={{ color: 'white', fontFamily: 'Inter', fontSize: '1rem', fontWeight: 600, marginBottom: '4rem', letterSpacing: '0.02em' }}>Do you wish it would happen?</p>
-      <button className="charcoal-pill-btn" onClick={async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user?.id) {
-          console.error("User must be authenticated before continuing to pay step");
-          window.location.href = '/login';
-          return;
-        }
-        goNext();
-      }}>yes</button>
+      <button className="charcoal-pill-btn" onClick={() => { /* no auth check */ goNext(); }}>yes</button>
     </div>
   );
 
   if (screen === 5) return (
-    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease', padding: '40px' }}>
+    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease' }}>
       <div style={{ textAlign: 'center', color: 'white', fontFamily: 'Inter', maxWidth: 600 }}>
         <p style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem' }}>Here in Camellia, we have a paywall.</p>
         <p style={{ fontSize: '1rem', fontWeight: 500, marginBottom: '0.4rem' }}>Payment methods: time + complete focus</p>
@@ -251,7 +207,7 @@ export default function Onboarding({ onComplete, onHome }) {
           </div>
           <button
             onClick={handleEnterDashboard}
-            style={{ background: '#F3EEF8', color: '#2D1B0E', border: '1.5px solid #ddd', borderRadius: 12, padding: '14px 40px', fontSize: '1.05rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', alignSelf: 'flex-start', transition: 'background 0.2s' }}
+            style={{ background: '#F3EEF8', color: '#2D1B0E', border: '1.5px solid #ddd', borderRadius: 12, padding: '14px 40px', fontSize: '1.05rem', fontWeight: 500, cursor: 'pointer' }}
             onMouseEnter={e => e.currentTarget.style.background = '#e8e0f5'}
             onMouseLeave={e => e.currentTarget.style.background = '#F3EEF8'}
           >
