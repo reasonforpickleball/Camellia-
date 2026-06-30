@@ -97,7 +97,7 @@ export default function LandingPage({ onCreateAccount }) {
         backdropFilter: 'blur(24px) saturate(180%)',
         WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         border: dark ? (isRed ? '1.5px solid rgba(255,80,80,0.4)' : '1.5px solid rgba(180,80,255,0.4)') : '1.5px solid rgba(255,200,170,0.7)',
-        boxShadow: dark ? (isRed ? '0 8px 32px rgba(180,20,20,0.3), inset 0 1px 0 rgba(255,100,100,0.15)' : '0 8px 32px rgba(100,20,200,0.3), inset 0 1px 0 rgba(200,100,255,0.15)') : '0 8px 32px rgba(0,0,0,0.08)',
+        boxShadow: dark ? (isRed ? '0 8px 32px rgba(180,20,20,0.3), inset 0 1px 0 rgba(255,100,100,0.15)' : '0 8px 32px rgba(100,20,200,0.3), inset 0 1px 0 rgba(200,100,255,0.15)') : '0 8px 32px rgba(200,100,40,0.2), inset 0 1px 0 rgba(255,200,150,0.2)',
         position: 'sticky',
         top: 16,
         zIndex: 100,
@@ -106,13 +106,15 @@ export default function LandingPage({ onCreateAccount }) {
           <img src={LOGO_WITH_TEXT} alt="Camellia" style={{ height: 44, objectFit: 'contain' }} />
         </div>
         <nav style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          <Link to="/" style={{ fontSize: '1rem', fontWeight: 600, color: dark ? '#e8d5ff' : '#5A1A40', cursor: 'pointer', textDecoration: 'none' }}>Home</Link>
-          <Link to="/about" style={{ fontSize: '1rem', fontWeight: 600, color: dark ? '#e8d5ff' : '#5A1A40', cursor: 'pointer', textDecoration: 'none' }}>About</Link>
-          <Link to="/contact" style={{ fontSize: '1rem', fontWeight: 600, color: dark ? '#e8d5ff' : '#5A1A40', cursor: 'pointer', textDecoration: 'none' }}>Contact</Link>
+          <Link to="/" style={{ fontSize: '1rem', fontWeight: 600, color: dark ? '#e8d5ff' : '#5A1A40', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.22s cubic-bezier(0.22,1,0.36,1)' }} onMouseEnter={e => e.currentTarget.style.color = accentLight} onMouseLeave={e => e.currentTarget.style.color = dark ? '#e8d5ff' : '#5A1A40'}>Home</Link>
+          <Link to="/about" style={{ fontSize: '1rem', fontWeight: 600, color: dark ? '#e8d5ff' : '#5A1A40', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.22s cubic-bezier(0.22,1,0.36,1)' }} onMouseEnter={e => e.currentTarget.style.color = accentLight} onMouseLeave={e => e.currentTarget.style.color = dark ? '#e8d5ff' : '#5A1A40'}>About</Link>
+          <Link to="/contact" style={{ fontSize: '1rem', fontWeight: 600, color: dark ? '#e8d5ff' : '#5A1A40', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.22s cubic-bezier(0.22,1,0.36,1)' }} onMouseEnter={e => e.currentTarget.style.color = accentLight} onMouseLeave={e => e.currentTarget.style.color = dark ? '#e8d5ff' : '#5A1A40'}>Contact</Link>
 
           <button
             onClick={onCreateAccount}
-            style={{ fontSize: '1rem', fontWeight: 600, color: dark ? '#e8d5ff' : '#5A1A40', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            style={{ fontSize: '1rem', fontWeight: 600, color: dark ? '#e8d5ff' : '#5A1A40', background: 'none', border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.22s cubic-bezier(0.22,1,0.36,1)' }}
+            onMouseEnter={e => e.currentTarget.style.color = accentLight}
+            onMouseLeave={e => e.currentTarget.style.color = dark ? '#e8d5ff' : '#5A1A40'}
           >
             {isReturning ? 'Go to Dashboard' : 'Create an Account'}
           </button>
@@ -135,7 +137,7 @@ export default function LandingPage({ onCreateAccount }) {
               boxShadow: dark ? (isRed ? '0 4px 20px rgba(200,20,20,0.3)' : '0 4px 20px rgba(120,20,200,0.3)') : '0 4px 20px rgba(200,80,40,0.15)',
             }}>
               <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '0.75rem', color: dark ? (isRed ? '#ffb0b0' : '#d0b0ff') : '#7B1A2E', fontWeight: 600 }}>100% free</span>
-              <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '1rem', fontWeight: 900, color: dark ? (isRed ? '#ff8888' : '#e8b8ff') : '#7B1A2E', lineHeight: 1.2, textAlign: 'center' }}>trusted</span>
+              <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '1rem', fontWeight: 900, color: dark ? (isRed ? '#ff8888' : '#e8b8ff') : '#7B1A2E', lineHeight: 1.2, textAlign: 'center' }}>forever</span>
               <span style={{ fontFamily: 'Roboto, sans-serif', fontSize: '0.75rem', color: dark ? (isRed ? '#ffb0b0' : '#d0b0ff') : '#7B1A2E', fontWeight: 600 }}>ever</span>
             </div>
 
@@ -172,7 +174,7 @@ export default function LandingPage({ onCreateAccount }) {
 
           <div style={{ width: '100%', height: 3, background: dark ? '#c77dff' : '#7b2d6e', marginBottom: 20 }} />
           <p style={{ fontSize: '1rem', color: dark ? 'rgba(230,210,255,0.88)' : '#3A1020', lineHeight: 1.75, maxWidth: 440, fontWeight: 500 }}>
-            <strong>I am not like them.</strong> Camellia is designed to understand the student. I am tired of websites that just stuff me with flashcards or quizzes, then proceed to ask me for a subscription.
+            <strong>I am not like them.</strong> Camellia is designed to understand the student. I am tired of websites that just stuff me with flashcards or quizzes, then proceed to ask me for a subscription. No cap, you're gonna get access to everything with no paywall. And your data? Only you know about it.
           </p>
         </div>
 
@@ -195,7 +197,7 @@ export default function LandingPage({ onCreateAccount }) {
               <div style={{ flex: 1, padding: '12px 14px', position: 'relative' }}>
                 <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                   {['Tutorial', 'Notebook 1', 'Recall 1', '+'].map(t => (
-                    <span key={t} style={{ fontSize: '0.5rem', background: t === 'Notebook 1' ? (dark ? '#7b2d6e' : '#2D1B0E') : 'transparent', color: t === 'Notebook 1' ? 'white' : (dark ? '#a08dba' : '#8A7A6A'), padding: '2px 6px', borderRadius: 6 }}>
+                    <span key={t} style={{ fontSize: '0.5rem', background: t === 'Notebook 1' ? (dark ? '#7b2d6e' : '#2D1B0E') : 'transparent', color: t === 'Notebook 1' ? 'white' : (dark ? '#a080d0' : '#8A7A6A'), padding: '2px 6px', borderRadius: 3, cursor: 'pointer', fontFamily: 'Roboto, sans-serif' }}>
                       {t}
                     </span>
                   ))}
@@ -230,7 +232,6 @@ export default function LandingPage({ onCreateAccount }) {
         </div>
       </section>
 
-      {/* The rest of the landing page (features, mockups, providers, CTA, footer) remains unchanged from the original design — copy/text/images preserved. */}
       {/* FEATURE SHOWCASE */}
       <section style={{ padding: isMobile ? '40px 20px' : '60px 60px' }}>
         <h2 style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 900, fontSize: 'clamp(1.8rem, 4vw, 3rem)', color: accentLight, textAlign: 'center', marginBottom: 32, letterSpacing: '-0.02em' }}>
@@ -238,23 +239,38 @@ export default function LandingPage({ onCreateAccount }) {
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(5, 1fr)', gap: 16, maxWidth: 1200, margin: '0 auto' }}>
           {FEATURES.map(f => (
-            <div key={f.title} style={{ background: cardWhite, borderRadius: 16, padding: '24px 20px', boxShadow: dark ? '0 8px 24px rgba(0,0,0,0.4)' : '0 8px 24px rgba(0,0,0,0.08)' }}>
-              <p style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 800, fontSize: '1.05rem', color: '#7b2d6e', marginBottom: 10 }}>{f.title}</p>
+            <div key={f.title} style={{
+              background: cardWhite,
+              borderRadius: 16,
+              padding: '24px 20px',
+              boxShadow: dark ? '0 8px 24px rgba(0,0,0,0.4)' : '0 8px 24px rgba(0,0,0,0.08)',
+              transition: 'all 0.22s cubic-bezier(0.22,1,0.36,1)',
+              cursor: 'pointer',
+              border: `1.5px solid ${cardBorder}`,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = dark ? '0 16px 40px rgba(0,0,0,0.6)' : '0 16px 40px rgba(0,0,0,0.12)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.transform = '';
+              e.currentTarget.style.boxShadow = dark ? '0 8px 24px rgba(0,0,0,0.4)' : '0 8px 24px rgba(0,0,0,0.08)';
+            }}
+            >
+              <p style={{ fontFamily: 'Roboto, sans-serif', fontWeight: 800, fontSize: '1.05rem', color: accentLight, marginBottom: 10 }}>{f.title}</p>
               <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: '0.9rem', color: dark ? '#d0b0ff' : '#3A1020', lineHeight: 1.6, margin: 0 }}>{f.body}</p>
             </div>
           ))}
         </div>
 
-        <div style={{ maxWidth: 760, margin: '32px auto 0', background: dark ? 'rgba(123,45,110,0.2)' : 'rgba(123,45,110,0.08)', border: '1.5px solid #7b2d6e', borderRadius: 16, padding: '20px 28px' }}>
+        <div style={{ maxWidth: 760, margin: '32px auto 0', background: dark ? 'rgba(123,45,110,0.2)' : 'rgba(123,45,110,0.08)', border: `1.5px solid ${accentLight}`, borderRadius: 16, padding: '20px 28px', boxShadow: dark ? '0 4px 16px rgba(0,0,0,0.2)' : '0 4px 16px rgba(0,0,0,0.06)', transition: 'all 0.22s cubic-bezier(0.22,1,0.36,1)' }}>
           <p style={{ fontFamily: 'Roboto, sans-serif', fontSize: isMobile ? '0.85rem' : '0.95rem', color: dark ? '#d0a0ff' : '#7b2d6e', lineHeight: 1.7, margin: 0, fontWeight: 500 }}>
-            Look, I am too broke to afford a server. So, your data ONLY stays in your computer's browser cache and the AI provider you chose with our BYOK settings. Nowhere else, you cleared your cookies, you cleared your cache — it's gone.
+            Look, I am too broke to afford a server. So, your data ONLY stays in your computer's browser cache and the AI provider you chose with our BYOK settings. Nowhere else, you cleared your cookies, you cleared your cache — it's gone. Camellia intentionally keeps your content local unless you explicitly opt to persist it somewhere you control.
           </p>
         </div>
       </section>
 
-      {/* ... remaining sections (LAZER FOCUSED, BRIDGE, 4 STUDY METHODS, AI PROVIDERS, FREE? CTA, FOOTER) should remain identical to the original visual and copy; keep images/links and card content intact. */}
-
-      <footer style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 60px', background: dark ? 'rgba(0,0,0,0.35)' : 'rgba(90,26,64,0.1)' }}>
+      <footer style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 60px', background: dark ? 'rgba(0,0,0,0.35)' : 'rgba(90,26,64,0.1)', borderTop: dark ? (isRed ? '1px solid rgba(180,40,40,0.2)' : '1px solid rgba(90,40,130,0.2)') : '1px solid rgba(200,100,50,0.2)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <span style={{ fontSize: '0.85rem', color: dark ? '#d0b0ff' : '#5A1A40', fontWeight: 500, fontFamily: 'Roboto, sans-serif' }}>Camellia 2026, built in Temple City, California</span>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
           <img src={LOGO_NO_TEXT} alt="Camellia" style={{ height: 32, objectFit: 'contain' }} />
