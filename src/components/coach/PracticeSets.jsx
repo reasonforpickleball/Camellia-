@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import PracticeSession from './PracticeSession';
+import PracticeSession from './PracticeSessions';
 const FONT = "'Roboto', Arial, sans-serif";
 
 export default function PracticeSets({ sets, dark, onSessionComplete }) {
