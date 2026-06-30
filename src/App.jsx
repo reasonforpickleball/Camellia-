@@ -10,6 +10,8 @@ import ScrollToTop from './components/ScrollToTop';
 import LandingPage from './components/LandingPage';
 import Onboarding from './components/Onboarding';
 import Dashboard from './pages/Dashboard';
+import About from './pages/About';
+import Contact from './pages/Contact';
 // Add page imports here
 
 function DoomiumApp() {
@@ -49,6 +51,8 @@ function App() {
         <Router>
           <ScrollToTop />
           <Routes>
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
             <Route path="/*" element={<DoomiumApp />} />
           </Routes>
         </Router>
