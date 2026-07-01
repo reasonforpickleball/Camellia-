@@ -240,9 +240,16 @@ export function buildSubjectsFromSessions() {
 
     const goal = localStorage.getItem(tk(ns, 'planner_goal')) || '';
     const filename = localStorage.getItem(tk(ns, 'planner_filename')) || '';
-    const name = ns === 'default'
+    // Strip academic level prefixes (AP, Honors, IB, etc.) — keep only the core subject name
+    const cleanSubjectName = (raw) => raw
+      .replace(/\b(AP|Honors?|IB|AICE|Dual\s+Enrollment|DE|Advanced|Accelerated|College\s+Prep|CP)\b[\s:]*/gi, '')
+      .replace(/,.*$/, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const rawName = ns === 'default'
       ? (filename.replace(/\.[^.]+$/, '') || 'Main Subject')
       : ns;
+    const name = cleanSubjectName(rawName) || rawName;
 
     const rawExamDate = parseExamDateFromGoal(goal);
     const examDate = validateExamDate(rawExamDate);
