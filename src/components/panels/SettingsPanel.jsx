@@ -47,6 +47,10 @@ const PROVIDERS = [
 
 export default function SettingsPanel() {
   const { dark } = useDarkMode();
+  const [profileName, setProfileName] = useState(() => localStorage.getItem('doomium_user_name') || '');
+  const [profileGoal, setProfileGoal] = useState(() => localStorage.getItem('doomium_user_goal') || '');
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [importMsg, setImportMsg] = useState('');
   const [provider, setProvider] = useState(() => localStorage.getItem('camellia_ai_provider') || 'groq');
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('camellia_ai_key') || '');
   const [model, setModel] = useState(() => localStorage.getItem('camellia_ai_model') || 'llama-3.1-8b-instant');
@@ -117,12 +121,60 @@ export default function SettingsPanel() {
   const suitePassCount = suiteResults ? suiteResults.filter(r => r.ok).length : 0;
   const allPassed = suiteResults && suitePassCount === suiteResults.length;
 
+  const handleSaveProfile = () => {
+    localStorage.setItem('doomium_user_name', profileName.trim());
+    localStorage.setItem('doomium_user_goal', profileGoal.trim());
+    setProfileSaved(true);
+    setTimeout(() => setProfileSaved(false), 2500);
+  };
+
+  const handleExportAll = () => {
+    const data = {};
+    Object.keys(localStorage).forEach(k => { data[k] = localStorage.getItem(k); });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'camellia-backup.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportAll = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        Object.entries(data).forEach(([k, v]) => localStorage.setItem(k, v));
+        setImportMsg('Data restored! Reloading...');
+        setTimeout(() => window.location.reload(), 1200);
+      } catch {
+        setImportMsg('Could not read that file, make sure it is a Camellia backup JSON.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="fade-in" style={{ maxWidth: 680, margin: '0 auto' }}>
       <h1 style={{ fontFamily: FONT, fontWeight: 700, fontSize: '2rem', color: dark ? '#c77dff' : '#4A3525', marginBottom: 8 }}>Settings</h1>
       <p style={{ fontFamily: FONT, fontSize: '0.9rem', color: textSecondary, marginBottom: 32 }}>
         Configure your AI provider. Your API key is stored only in this browser, never sent to Camellia's servers.
       </p>
+
+      {/* Edit profile */}
+      <div style={{ background: cardBg, border: cardBorder, borderRadius: 14, padding: '24px 28px', marginBottom: 20, ...glassStyle }}>
+        <p style={{ fontFamily: FONT, fontWeight: 700, fontSize: '1rem', color: textPrimary, marginBottom: 16 }}>Edit Profile</p>
+        <p style={{ fontFamily: FONT, fontWeight: 600, fontSize: '0.9rem', color: textPrimary, marginBottom: 4 }}>Name</p>
+        <input value={profileName} onChange={e => setProfileName(e.target.value)} style={{ width: '100%', padding: '10px 14px', border: inputBorder, borderRadius: 8, fontFamily: FONT, fontSize: '0.9rem', color: textPrimary, background: inputBg, marginBottom: 16, outline: 'none', boxSizing: 'border-box' }} />
+        <p style={{ fontFamily: FONT, fontWeight: 600, fontSize: '0.9rem', color: textPrimary, marginBottom: 4 }}>Goal</p>
+        <input value={profileGoal} onChange={e => setProfileGoal(e.target.value)} style={{ width: '100%', padding: '10px 14px', border: inputBorder, borderRadius: 8, fontFamily: FONT, fontSize: '0.9rem', color: textPrimary, background: inputBg, marginBottom: 16, outline: 'none', boxSizing: 'border-box' }} />
+        <button onClick={handleSaveProfile} style={{ background: '#7b2d6e', color: 'white', border: 'none', borderRadius: 8, padding: '10px 20px', fontFamily: FONT, fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
+          {profileSaved ? 'Saved!' : 'Save Profile'}
+        </button>
+      </div>
 
       {/* Provider selector */}
       <div style={{ background: cardBg, border: cardBorder, borderRadius: 14, padding: '24px 28px', marginBottom: 20, ...glassStyle }}>
@@ -236,6 +288,22 @@ export default function SettingsPanel() {
         <button onClick={exportCoachData} style={{ background: '#7b2d6e', color: 'white', border: 'none', borderRadius: 8, padding: '8px 18px', fontFamily: FONT, fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
           Export Coach Data
         </button>
+      </div>
+
+      {/* Full data export/import */}
+      <div style={{ background: dark ? 'rgba(22,14,36,0.6)' : '#F8F4EE', border: dark ? '1px solid rgba(90,40,130,0.3)' : 'none', borderRadius: 12, padding: '16px 20px', marginBottom: 20 }}>
+        <p style={{ fontFamily: FONT, fontWeight: 700, fontSize: '0.88rem', color: dark ? '#c77dff' : '#4A3525', marginBottom: 6 }}>Full Backup (Everything)</p>
+        <p style={{ fontFamily: FONT, fontSize: '0.82rem', color: dark ? '#a080c0' : '#9A8A7A', marginBottom: 10 }}>Export or restore your entire Camellia data: profile, notes, flashcards, quizzes, coach data, and AI settings.</p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <button onClick={handleExportAll} style={{ background: '#7b2d6e', color: 'white', border: 'none', borderRadius: 8, padding: '8px 18px', fontFamily: FONT, fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}>
+            Export Everything
+          </button>
+          <label style={{ background: dark ? 'rgba(30,10,46,0.6)' : 'white', border: `1.5px solid ${dark ? 'rgba(90,40,130,0.6)' : '#7b2d6e'}`, borderRadius: 8, padding: '8px 18px', fontFamily: FONT, fontWeight: 600, fontSize: '0.85rem', color: dark ? '#c4a0e0' : '#7b2d6e', cursor: 'pointer' }}>
+            Import Backup
+            <input type="file" accept="application/json" onChange={handleImportAll} style={{ display: 'none' }} />
+          </label>
+        </div>
+        {importMsg && <p style={{ fontFamily: FONT, fontSize: '0.8rem', color: dark ? '#c77dff' : '#7b2d6e', marginTop: 8 }}>{importMsg}</p>}
       </div>
 
       {/* Danger zone */}
