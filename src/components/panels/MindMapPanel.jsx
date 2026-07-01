@@ -231,7 +231,7 @@ export default function MindMapPanel({ ns = 'default' }) {
           <ellipse cx={centralPos.x} cy={centralPos.y} rx={CR} ry={44} fill="#7b2d6e" />
           <text x={centralPos.x} y={centralPos.y} textAnchor="middle" dominantBaseline="middle"
             style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, fill: 'white', pointerEvents: 'none' }}>
-            {truncate(mindMap.central, 30)}
+            {truncate(mindMap.central, 40)}
           </text>
 
           {/* Branch nodes */}
@@ -272,7 +272,7 @@ export default function MindMapPanel({ ns = 'default' }) {
                   <rect x={np.x - NW / 2} y={np.y - NH / 2} width={NW} height={NH} rx={10} fill={fill} stroke={stroke} strokeWidth={1.5} />
                   <text x={np.x} y={np.y - 8} textAnchor="middle" dominantBaseline="middle"
                     style={{ fontFamily: FONT, fontSize: 11, fontWeight: 600, fill: textFill, pointerEvents: 'none' }}>
-                    {truncate(node.label, 24)}
+                    {truncate(node.label, 34)}
                   </text>
                   <text x={np.x} y={np.y + 11} textAnchor="middle" dominantBaseline="middle"
                     style={{ fontFamily: FONT, fontSize: 9, fill: level !== 'not_started' ? 'rgba(255,255,255,0.8)' : (dark ? '#a080c8' : '#9A8A7A'), pointerEvents: 'none' }}>
