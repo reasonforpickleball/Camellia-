@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { incrementQuizzes } from '../../lib/stats';
-import { aiAsk, isAIConfigured, parseAIJson } from '../../lib/aiClient';
+import { aiAsk, isAIConfigured, parseAIJson, getTaskModel } from '../../lib/aiClient';
 import { useDarkMode } from '../../lib/DarkModeContext';
 import AIProgressBar, { useAIProgress } from '../AIProgressBar';
+import useTourStep from '../../hooks/useTourStep';
+import { setTourStep } from '../../lib/tourStore';
+import TourPointer from '../TourPointer';
 
 function shuffleQuestion(q) {
   if (q.type !== 'mc') return q;
@@ -57,7 +60,7 @@ export default function QuizzesPanel({ ns = 'default' }) {
   const { dark } = useDarkMode();
   const { progress: genProgress, active: genProgActive, startProgress: startGenProgress, finishProgress: finishGenProgress } = useAIProgress();
   const { progress: gradeProgress, active: gradeProgActive, startProgress: startGradeProgress, finishProgress: finishGradeProgress } = useAIProgress();
-  const [totalQuestions, setTotalQuestions] = useState(10);
+  const [totalQuestions, setTotalQuestions] = useState(5);
   const [mcPct, setMcPct] = useState(60);
   const [fitbPct, setFitbPct] = useState(20);
   // essay pct = 100 - mc - fitb
@@ -82,6 +85,8 @@ export default function QuizzesPanel({ ns = 'default' }) {
   const [followUpLoading, setFollowUpLoading] = useState(false);
   // Spaced repetition: missed questions come back later
   const missedRef = useRef([]);
+  const tourStep = useTourStep();
+  const startQuizBtnRef = useRef(null);
 
   useEffect(() => { setRecentQuizzes(loadRecentQuizzes(ns)); }, [ns]);
 
@@ -101,47 +106,53 @@ export default function QuizzesPanel({ ns = 'default' }) {
 
       let allQuestions = [];
 
-      // Generate MC
+      // Generate MC — one type failing shouldn't abort the other types
       if (mcCount > 0) {
-        const raw = await aiAsk(
-          `You are an expert quiz creator. Generate high-quality multiple choice questions that test genuine understanding. NEVER ask about file metadata.`,
-          `Generate EXACTLY ${mcCount + BUFFER} multiple choice questions from this material. You MUST return exactly ${mcCount + BUFFER} items.\n\nMATERIAL:\n${rawMaterial.slice(0, 10000)}\n\nReturn ONLY JSON array (no other text): [{"type":"mc","q":"question","options":["A","B","C","D"],"correct":0}]`,
-          { maxTokens: 3000 }
-        );
-        const parsed = parseAIJson(raw);
-        if (Array.isArray(parsed)) {
-          const valid = parsed.filter(q => q.q && Array.isArray(q.options) && q.options.length === 4 && typeof q.correct === 'number');
-          allQuestions.push(...valid.slice(0, mcCount).map(q => ({ ...q, type: 'mc' })));
-        }
+        try {
+          const raw = await aiAsk(
+            `You are an expert quiz creator. Generate high-quality multiple choice questions that test genuine understanding. NEVER ask about file metadata.`,
+            `Generate EXACTLY ${mcCount + BUFFER} multiple choice questions from this material. You MUST return exactly ${mcCount + BUFFER} items.\n\nMATERIAL:\n${rawMaterial.slice(0, 10000)}\n\nReturn ONLY JSON array (no other text): [{"type":"mc","q":"question","options":["A","B","C","D"],"correct":0}]`,
+            { maxTokens: Math.min(4000, 220 * (mcCount + BUFFER)), model: getTaskModel('quiz_gen') }
+          );
+          const parsed = parseAIJson(raw);
+          if (Array.isArray(parsed)) {
+            const valid = parsed.filter(q => q.q && Array.isArray(q.options) && q.options.length === 4 && typeof q.correct === 'number');
+            allQuestions.push(...valid.slice(0, mcCount).map(q => ({ ...q, type: 'mc' })));
+          }
+        } catch {}
       }
 
       // Generate Fill-in-the-blank
       if (fitbCount > 0) {
-        const raw = await aiAsk(
-          `You are an expert quiz creator. Generate fill-in-the-blank questions where the student writes a short answer (1-5 words). Focus on key terms, definitions, and important facts.`,
-          `Generate EXACTLY ${fitbCount + BUFFER} fill-in-the-blank questions from this material. You MUST return exactly ${fitbCount + BUFFER} items.\n\nMATERIAL:\n${rawMaterial.slice(0, 10000)}\n\nReturn ONLY JSON array (no other text): [{"type":"fitb","q":"The ___ is responsible for...","answer":"correct short answer","hint":"optional context"}]`,
-          { maxTokens: 2000 }
-        );
-        const parsed = parseAIJson(raw);
-        if (Array.isArray(parsed)) {
-          allQuestions.push(...parsed.filter(q => q.q && q.answer).slice(0, fitbCount).map(q => ({ ...q, type: 'fitb' })));
-        }
+        try {
+          const raw = await aiAsk(
+            `You are an expert quiz creator. Generate fill-in-the-blank questions where the student writes a short answer (1-5 words). Focus on key terms, definitions, and important facts.`,
+            `Generate EXACTLY ${fitbCount + BUFFER} fill-in-the-blank questions from this material. You MUST return exactly ${fitbCount + BUFFER} items.\n\nMATERIAL:\n${rawMaterial.slice(0, 10000)}\n\nReturn ONLY JSON array (no other text): [{"type":"fitb","q":"The ___ is responsible for...","answer":"correct short answer","hint":"optional context"}]`,
+            { maxTokens: Math.min(3000, 150 * (fitbCount + BUFFER)), model: getTaskModel('quiz_gen') }
+          );
+          const parsed = parseAIJson(raw);
+          if (Array.isArray(parsed)) {
+            allQuestions.push(...parsed.filter(q => q.q && q.answer).slice(0, fitbCount).map(q => ({ ...q, type: 'fitb' })));
+          }
+        } catch {}
       }
 
       // Generate Essay
       if (essayCount > 0) {
-        const raw = await aiAsk(
-          `You are an expert quiz creator. Generate open-ended essay questions that require critical thinking and deep understanding of the material.`,
-          `Generate EXACTLY ${essayCount + BUFFER} essay questions from this material. You MUST return exactly ${essayCount + BUFFER} items.\n\nMATERIAL:\n${rawMaterial.slice(0, 10000)}\n\nReturn ONLY JSON array (no other text): [{"type":"essay","q":"question requiring detailed explanation","keyPoints":["point1","point2","point3"]}]`,
-          { maxTokens: 1500 }
-        );
-        const parsed = parseAIJson(raw);
-        if (Array.isArray(parsed)) {
-          allQuestions.push(...parsed.filter(q => q.q).slice(0, essayCount).map(q => ({ ...q, type: 'essay' })));
-        }
+        try {
+          const raw = await aiAsk(
+            `You are an expert quiz creator. Generate open-ended essay questions that require critical thinking and deep understanding of the material.`,
+            `Generate EXACTLY ${essayCount + BUFFER} essay questions from this material. You MUST return exactly ${essayCount + BUFFER} items.\n\nMATERIAL:\n${rawMaterial.slice(0, 10000)}\n\nReturn ONLY JSON array (no other text): [{"type":"essay","q":"question requiring detailed explanation","keyPoints":["point1","point2","point3"]}]`,
+            { maxTokens: Math.min(3000, 180 * (essayCount + BUFFER)), model: getTaskModel('quiz_gen') }
+          );
+          const parsed = parseAIJson(raw);
+          if (Array.isArray(parsed)) {
+            allQuestions.push(...parsed.filter(q => q.q).slice(0, essayCount).map(q => ({ ...q, type: 'essay' })));
+          }
+        } catch {}
       }
 
-      if (allQuestions.length === 0) { setGenError('No questions generated. Try again.'); setGenerating(false); return; }
+      if (allQuestions.length === 0) { setGenError('Could not generate questions. Please try again.'); finishGenProgress(); setGenerating(false); return; }
 
       // Trim to EXACTLY totalQuestions
       const trimmed = allQuestions.slice(0, totalQuestions);
@@ -183,7 +194,7 @@ export default function QuizzesPanel({ ns = 'default' }) {
       const raw = await aiAsk(
         `You are a strict but fair teacher grading a student's answer. Be honest, encouraging, and educational.`,
         `Question: "${q.q}"\nStudent's answer: "${userAnswer}"\n${correctAnswer}\n${keyPoints}\n\nReturn ONLY JSON: {"correct": true/false, "score": 0-100, "explanation": "detailed explanation of what is right/wrong and the correct answer", "summary": "one sentence verdict"}`,
-        { maxTokens: 500 }
+        { maxTokens: 500, model: getTaskModel('quiz_grade') }
       );
       const result = parseAIJson(raw);
       const isCorrect = result.correct || result.score >= 60;
@@ -215,7 +226,7 @@ export default function QuizzesPanel({ ns = 'default' }) {
       const raw = await aiAsk(
         `You are a study coach. Briefly explain why an answer is correct or incorrect.`,
         `Question: "${q.q}"\nCorrect answer: "${q.options[q.correct]}"\nStudent chose: "${q.options[idx]}"\nIs correct: ${isCorrect}\n\nReturn ONLY JSON: {"explanation": "2-3 sentence explanation of why the correct answer is right and what concept it tests"}`,
-        { maxTokens: 300 }
+        { maxTokens: 300, model: getTaskModel('quiz_explain') }
       );
       const result = parseAIJson(raw);
       finishGradeProgress();
@@ -234,20 +245,15 @@ export default function QuizzesPanel({ ns = 'default' }) {
 
   const handleNext = () => {
     const nextIdx = current + 1;
-    // Spaced repetition: insert missed questions a few ahead
-    let qs = [...questions];
-    if (missedRef.current.length > 0 && nextIdx < qs.length) {
-      const missed = missedRef.current.pop();
-      const insertAt = Math.min(nextIdx + 3, qs.length);
-      qs.splice(insertAt, 0, { ...missed, _spaced: true });
-      setQuestions(qs);
-    }
+    // Quiz length is fixed to the number of questions the user set, regardless of right/wrong answers
+    const qs = questions;
 
     if (nextIdx >= qs.length) {
       const updated = saveRecentQuiz(ns, scoreRef.current, qs.length);
       setRecentQuizzes(updated);
       incrementQuizzes();
       setFinished(true);
+      if (tourStep === 5) setTourStep(6);
     } else {
       setCurrent(nextIdx);
       setSelected(null);
@@ -266,7 +272,7 @@ export default function QuizzesPanel({ ns = 'default' }) {
       const ans = await aiAsk(
         `You are a helpful study tutor. Answer the student's follow-up question clearly and concisely.`,
         `Original question: "${q.q}"\nStudent follow-up: "${followUpQ}"\n\nGive a clear, educational answer in 2-4 sentences.`,
-        { maxTokens: 300 }
+        { maxTokens: 300, model: getTaskModel('quiz_followup') }
       );
       setFollowUpAns(ans);
     } catch (e) {
@@ -464,8 +470,9 @@ export default function QuizzesPanel({ ns = 'default' }) {
           </div>
         )}
 
+        {tourStep === 5 && <TourPointer anchorRef={startQuizBtnRef} step={5} text="Try taking a quiz on your material here!" placement="bottom" />}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 32 }}>
-          <button onClick={startQuiz} disabled={generating} style={{ background: dark ? '#3a1f5a' : '#3D2B1F', color: 'white', border: 'none', borderRadius: 12, padding: '16px 36px', fontFamily: FONT, fontWeight: 700, fontSize: '1rem', cursor: 'pointer' }}>
+          <button ref={startQuizBtnRef} onClick={startQuiz} disabled={generating} style={{ background: dark ? '#3a1f5a' : '#3D2B1F', color: 'white', border: 'none', borderRadius: 12, padding: '16px 36px', fontFamily: FONT, fontWeight: 700, fontSize: '1rem', cursor: 'pointer' }}>
             {generating ? 'Generating…' : 'Start Quiz'}
           </button>
           <button onClick={generateFreshQuestions} disabled={generating} style={{ background: '#7b2d6e', color: 'white', border: 'none', borderRadius: 12, padding: '16px 28px', fontFamily: FONT, fontWeight: 600, fontSize: '0.9rem', cursor: generating ? 'not-allowed' : 'pointer' }}>
