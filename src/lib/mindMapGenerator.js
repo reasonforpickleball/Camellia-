@@ -24,19 +24,21 @@ function cleanMetadata(text) {
     .join('\n');
 }
 
-// Extract a short, complete noun-phrase label from a sentence
-// Returns only the first meaningful clause, not a fragment
+// Extract a short, complete label from a sentence — keeps full sentences
+// instead of chopping mid-word into meaningless fragments.
 function extractLabel(text) {
   if (!text) return '';
   const t = text.trim().replace(/^[-•*#>\d.]+\s*/, '').trim();
-  // If text is already short and clean, use as-is
-  if (t.length <= 32 && !/[•\*#]/.test(t)) return t;
-  // Take content up to the first comma, colon, semicolon, or dash (but ensure it's meaningful)
-  const cutAt = t.search(/[,;:—–]/);
-  const candidate = cutAt > 8 ? t.slice(0, cutAt).trim() : t;
-  // Split into words and take up to 5 words to form a clean phrase
-  const words = candidate.split(/\s+/).slice(0, 5);
-  return words.join(' ');
+  // If text is already a short, complete sentence, use it as-is
+  if (t.length <= 60) return t;
+  // Prefer a complete sentence (ending in . ! or ?) if reasonably short
+  const sentenceMatch = t.match(/^[^.!?]+[.!?]/);
+  if (sentenceMatch && sentenceMatch[0].trim().length <= 90) return sentenceMatch[0].trim();
+  // Otherwise trim to the nearest full word under ~80 chars (no mid-word cuts)
+  const truncated = t.slice(0, 80);
+  const lastSpace = truncated.lastIndexOf(' ');
+  const clean = lastSpace > 20 ? truncated.slice(0, lastSpace) : truncated;
+  return clean.trim() + '…';
 }
 
 export function generateMindMap(rawText) {
@@ -50,7 +52,7 @@ export function generateMindMap(rawText) {
   // Central node: first heading or first meaningful line
   const headingLine = lines.find(l => l.length > 4 && l.length < 80 && /^#{1,3}\s+/.test(l));
   const firstLine = headingLine || lines.find(l => l.length > 5 && !/^\d/.test(l)) || 'Main Topic';
-  const central = firstLine.replace(/^[#\-*>]+\s*/, '').split(/[,;:—]/)[0].trim().slice(0, 40);
+  const central = extractLabel(firstLine.replace(/^[#\-*>]+\s*/, '').trim()).slice(0, 60);
 
   let sections = [];
   try { sections = extractSections(cleaned) || []; } catch {}
@@ -98,8 +100,8 @@ export function generateMindMap(rawText) {
       seen.add(label.toLowerCase());
       nodes.push({
         id: `node_${i}_${nodes.length}`,
-        label: label.slice(0, 30),
-        description: src.replace(/\s+/g, ' ').slice(0, 120),
+        label: label.slice(0, 60),
+        description: src.replace(/\s+/g, ' ').slice(0, 200),
         branchId: sec.id,
       });
     }
