@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { aiAsk, isAIConfigured, parseAIJson } from '../../lib/aiClient';
+import { aiAsk, isAIConfigured, parseAIJson, getTaskModel } from '../../lib/aiClient';
 import { useDarkMode } from '../../lib/DarkModeContext';
 import AIProgressBar, { useAIProgress } from '../AIProgressBar';
 
@@ -80,7 +80,7 @@ export default function FlashcardPanel({ ns = 'default' }) {
       const raw = await aiAsk(
         `You are an expert flashcard creator. Generate high-quality flashcards from study material. Focus on key concepts, definitions, processes, formulas, and important facts. NEVER include file metadata, dates, author names, or formatting artifacts. Each card must genuinely test understanding of the subject matter.`,
         `Generate 25 flashcards from this study material.\n\nMATERIAL:\n${rawMaterial.slice(0, 12000)}\n\nReturn ONLY a JSON array: [{"term": "...", "definition": "detailed explanation..."}, ...]\n\nMake each definition thorough and educational, 1-3 sentences.`,
-        { maxTokens: 3500 }
+        { maxTokens: 3500, model: getTaskModel('flashcard_regen') }
       );
       const cards = parseAIJson(raw);
       const valid = Array.isArray(cards)
