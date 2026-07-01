@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { aiAsk, isAIConfigured, parseAIJson } from '../../lib/aiClient';
+import { aiAsk, isAIConfigured, parseAIJson, getTaskModel } from '../../lib/aiClient';
 import { readFileAsText } from '../../lib/pdfParser';
 import { useDarkMode } from '../../lib/DarkModeContext';
 import AIProgressBar from '../AIProgressBar';
+import useTourStep from '../../hooks/useTourStep';
+import TourPointer from '../TourPointer';
 
 const tk = (ns, key) => `camellia_${ns}_${key}`;
 const FONT = "'Roboto', Arial, Helvetica, sans-serif";
@@ -47,7 +49,7 @@ function formatInline(text, isDark) {
   return parts.map((part, i) => i % 2 === 1 ? <strong key={i} style={{ color: isDark ? '#e8d5ff' : '#4A3525', fontWeight: 700 }}>{part}</strong> : part);
 }
 
-function Slider({ min, max, value, onChange, label, unit }) {
+function Slider({ min, max, step = 1, value, onChange, label, unit }) {
   const pct = ((value - min) / (max - min)) * 100;
   const thumbOffset = 18 - (pct / 100) * 36;
   const isDark = document.documentElement.classList.contains('dark');
@@ -58,7 +60,7 @@ function Slider({ min, max, value, onChange, label, unit }) {
     <div style={{ marginBottom: 20 }}>
       <p style={{ fontFamily: FONT, fontSize: '0.9rem', color: isDark ? '#c4a8e0' : '#8A7A6A', textAlign: 'center', marginBottom: 10 }}>{label}: <strong style={{ color: thumbColor }}>{value} {unit}</strong></p>
       <div style={{ position: 'relative', height: 36, padding: '0 18px' }}>
-        <input type="range" min={min} max={max} value={value} onChange={e => onChange(Number(e.target.value))}
+        <input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))}
           style={{ width: '100%', position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', zIndex: 2, height: '100%' }}
         />
         <div style={{ position: 'absolute', left: 18, right: 18, top: 0, bottom: 0, borderRadius: 18, background: trackBg, display: 'flex', alignItems: 'center' }}>
@@ -69,13 +71,19 @@ function Slider({ min, max, value, onChange, label, unit }) {
   );
 }
 
-export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterialReady, isTimerConfigured }) {
+export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterialReady, isTimerConfigured, notesBoxRef: notesBoxRefProp }) {
   const { dark: isDark } = useDarkMode();
   const isMobile = useIsMobile();
   const [step, setStep] = useState(0);         // 0 = idle, 1-6 = active steps
   const TOTAL_STEPS = 6;
   const [goal, setGoal] = useState(() => localStorage.getItem(tk(ns, 'planner_goal')) || '');
-  const [fileName, setFileName] = useState(() => localStorage.getItem(tk(ns, 'planner_filename')) || '');
+  const [fileNames, setFileNames] = useState(() => {
+    try {
+      const raw = localStorage.getItem(tk(ns, 'planner_filename')) || '[]';
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [raw].filter(Boolean);
+    } catch { return []; }
+  });
   const [dragOver, setDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
@@ -83,13 +91,19 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
   const [activeView, setActiveView] = useState('notes');
   const [schedule, setSchedule] = useState(() => localStorage.getItem(tk(ns, 'schedule')) || '');
   const [keyPoints, setKeyPoints] = useState(() => localStorage.getItem(tk(ns, 'notes')) || '');
-  const [pendingFile, setPendingFile] = useState(null);
+  const [pendingFiles, setPendingFiles] = useState([]);
   const [hoursPerDay, setHoursPerDay] = useState(2);
+  // 0.5 hour increments so hoursPerDay can be a decimal like 0.5 or 1.5
   const [daysUntilTest, setDaysUntilTest] = useState(7);
   const [khanVideos, setKhanVideos] = useState(() => {
     try { return JSON.parse(localStorage.getItem(tk(ns, 'khan_videos')) || 'null'); } catch { return null; }
   });
   const fileRef = useRef();
+  const tourStep = useTourStep();
+  const dropZoneRef = useRef(null);
+  const localNotesBoxRef = useRef(null);
+  const notesBoxRef = notesBoxRefProp || localNotesBoxRef;
+  const slidersAndDropRef = useRef(null);
 
   useEffect(() => {
     if (schedule && keyPoints) setGenerated(true);
@@ -101,30 +115,30 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
   const handleFileDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files[0];
-    if (file) {
-      setFileName(file.name);
-      setPendingFile(file);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length) {
+      setFileNames(files.map(f => f.name));
+      setPendingFiles(files);
     }
   };
 
   const handleFileInput = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFileName(file.name);
-      setPendingFile(file);
+    const files = Array.from(e.target.files);
+    if (files.length) {
+      setFileNames(files.map(f => f.name));
+      setPendingFiles(files);
     }
   };
 
   const removeFile = () => {
-    setFileName('');
-    setPendingFile(null);
+    setFileNames([]);
+    setPendingFiles([]);
     localStorage.removeItem(tk(ns, 'planner_filename'));
     localStorage.removeItem(tk(ns, 'raw_material'));
   };
 
   const handleGenerate = async () => {
-    if (!pendingFile && !localStorage.getItem(tk(ns, 'raw_material'))) {
+    if (pendingFiles.length === 0 && !localStorage.getItem(tk(ns, 'raw_material'))) {
       alert('Please upload a file first.');
       return;
     }
@@ -134,48 +148,56 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
     }
 
     let rawText = '';
-    if (pendingFile) {
+    if (pendingFiles.length > 0) {
       setLoading(true);
       setStep(0);
-      setLoadingStep('Reading your file...');
+      setLoadingStep('Reading your files...');
       try {
-        const isImage = pendingFile.type.startsWith('image/');
-        if (isImage) {
-          // Convert to base64 data URL and send directly to the vision model (BYOK, no server)
-          setLoadingStep('Reading handwritten notes with AI vision...');
-          const dataUrl = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = e => resolve(e.target.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(pendingFile);
-          });
-          const transcribed = await aiAsk(
-            `You are an expert at reading handwritten and printed notes. Transcribe ALL text visible in this image completely and accurately. Preserve structure, headings, bullet points, and formatting as much as possible. Include every word you can read.`,
-            `Please transcribe all text from this image of notes.`,
-            { maxTokens: 4000, file_urls: [dataUrl] }
-          );
-          rawText = transcribed;
-          if (!rawText || rawText.trim().length < 20) {
-            alert('Could not read text from this image. Make sure the photo is clear and well-lit.');
-            setLoading(false);
-            return;
-          }
-        } else {
-          rawText = await readFileAsText(pendingFile);
-          if (!rawText || rawText.trim().length < 30) {
-            alert('Could not extract readable text from this file. Try a .txt or .pdf with selectable text.');
-            setLoading(false);
-            return;
+        const textParts = [];
+        for (const file of pendingFiles) {
+          const isImage = file.type.startsWith('image/');
+          if (isImage) {
+            // Convert to base64 data URL and send directly to the vision model (BYOK, no server)
+            setLoadingStep(`Reading handwritten notes with AI vision (${file.name})...`);
+            const dataUrl = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = e => resolve(e.target.result);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+            const transcribed = await aiAsk(
+              `You are an expert at reading handwritten and printed notes. Transcribe ALL text visible in this image completely and accurately. Preserve structure, headings, bullet points, and formatting as much as possible. Include every word you can read.`,
+              `Please transcribe all text from this image of notes.`,
+              { maxTokens: 4000, file_urls: [dataUrl] }
+            );
+            if (!transcribed || transcribed.trim().length < 20) {
+              alert(`Could not read text from "${file.name}". Make sure the photo is clear and well-lit.`);
+              continue;
+            }
+            textParts.push(transcribed);
+          } else {
+            setLoadingStep(`Reading ${file.name}...`);
+            const text = await readFileAsText(file);
+            if (!text || text.trim().length < 30) {
+              alert(`Could not extract readable text from "${file.name}". Try a .txt or .pdf with selectable text.`);
+              continue;
+            }
+            textParts.push(text);
           }
         }
-        localStorage.setItem(tk(ns, 'planner_filename'), pendingFile.name);
+        rawText = textParts.join('\n\n---\n\n');
+        if (!rawText || rawText.trim().length < 30) {
+          setLoading(false);
+          return;
+        }
+        localStorage.setItem(tk(ns, 'planner_filename'), JSON.stringify(pendingFiles.map(f => f.name)));
         localStorage.setItem(tk(ns, 'planner_goal'), goal);
         const storeText = rawText.length > 500000
           ? rawText.slice(0, 200000) + '\n\n[...]\n\n' + rawText.slice(Math.floor(rawText.length / 2) - 50000, Math.floor(rawText.length / 2) + 50000) + '\n\n[...]\n\n' + rawText.slice(-200000)
           : rawText;
         localStorage.setItem(tk(ns, 'raw_material'), storeText);
       } catch (err) {
-        alert('Error reading file: ' + err.message);
+        alert('Error reading files: ' + err.message);
         setLoading(false);
         return;
       }
@@ -203,7 +225,7 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
       const notesRaw = await aiAsk(
         `You are an expert study notes generator. Create extremely detailed, multi-section study notes from the provided material. Use markdown formatting: ## for main sections, ### for subsections, * **text** for key points, - for bullets, > for important quotes/definitions. Include: key concepts, definitions, examples, relationships between ideas, and memory tips. Do NOT copy-paste raw text, synthesize and explain. Make it thorough like a professional textbook summary. IMPORTANT: Do NOT include any dates, file names, author names, page numbers, or document metadata in the notes. Only include actual subject matter.`,
         `Create comprehensive study notes from this material.${goalCtx}\n\nMATERIAL:\n${truncated}`,
-        { maxTokens: 3000 }
+        { maxTokens: 3000, model: getTaskModel('notes') }
       );
       saveKeyPoints(notesRaw);
 
@@ -212,7 +234,7 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
       const scheduleRaw = await aiAsk(
         `You are an expert study planner. Create a realistic multi-day study schedule with spaced repetition built in. IMPORTANT RULES: (1) Never use specific clock times. Use durations like "1 hour" or "45 minutes". (2) Distribute hours across days. (3) Use ## for day headers, use "- " bullet points for all activities (NEVER use commas as list separators), use > for tips. (4) Include spaced repetition: schedule review sessions for previous material on later days. Format: "- 45 minutes: Active Recall on Chapter 3". Optimize for retention.`,
         `Create a study schedule with spaced repetition. ${studyCtx}${goalCtx}\n\nMATERIAL SUMMARY:\n${truncated.slice(0, 6000)}\n\nIMPORTANT: Use "- " bullet points for every activity. NO comma-separated lists. Distribute ${hoursPerDay} hours across ${daysUntilTest} days.`,
-        { maxTokens: 2000 }
+        { maxTokens: 2000, model: getTaskModel('schedule') }
       );
       saveSchedule(scheduleRaw);
 
@@ -221,7 +243,7 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
       const flashcardsRaw = await aiAsk(
         `You are an expert flashcard creator. Generate exactly 20 high-quality flashcards from the study material. Focus on key concepts, definitions, formulas, processes, and important facts. NEVER include metadata like dates, file names, or author info. Each card should test genuine understanding.`,
         `Generate 20 flashcards from this material.${goalCtx}\n\nMATERIAL:\n${truncated.slice(0, 10000)}\n\nReturn ONLY a JSON array: [{"term": "...", "definition": "..."}, ...]`,
-        { maxTokens: 3000 }
+        { maxTokens: 3000, model: getTaskModel('flashcards') }
       );
       try {
         const cards = parseAIJson(flashcardsRaw);
@@ -236,7 +258,7 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
       const quizRaw = await aiAsk(
         `You are an expert quiz creator. Generate exactly 20 multiple-choice quiz questions from the study material. Each question should test understanding, not just memorization. Make distractors plausible but clearly wrong. Questions must be based on the actual content, no metadata, no file dates.`,
         `Generate 20 multiple choice questions from this material.${goalCtx}\n\nMATERIAL:\n${truncated.slice(0, 10000)}\n\nReturn ONLY a JSON array: [{"q": "question text", "options": ["A", "B", "C", "D"], "correct": 0}] where correct is the 0-based index of the right answer.`,
-        { maxTokens: 3000 }
+        { maxTokens: 3000, model: getTaskModel('quiz_gen') }
       );
       try {
         const questions = parseAIJson(quizRaw);
@@ -252,7 +274,7 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
         const khanRaw = await aiAsk(
           `You are an expert Khan Academy curator with deep knowledge of every Khan Academy course URL. Your task is to return REAL, EXISTING Khan Academy course or lesson URLs — NOT search links. Use this URL structure: https://www.khanacademy.org/{subject}/{course}/{unit}/{lesson}. Examples of real URLs: https://www.khanacademy.org/science/ap-biology/natural-selection/population-genetics/e/population-genetics, https://www.khanacademy.org/math/algebra/x2f8bb11595b61c86:quadratic-functions-equations/x2f8bb11595b61c86:quadratic-formula-a1/v/using-the-quadratic-formula, https://www.khanacademy.org/science/chemistry/chemical-reactions-stoichiome/stoichiometry-ideal/v/stoichiometry. Return only URLs you are highly confident exist.`,
           `Find 6 real Khan Academy course/lesson URLs most relevant to this study material.\n\nMATERIAL SUMMARY:\n${truncated.slice(0, 4000)}\n\nReturn ONLY a JSON array: [{"title": "Descriptive lesson title", "url": "https://www.khanacademy.org/real/course/path", "topic": "subject area"}]\n\nIMPORTANT: Use real course paths, NOT search URLs. Only return URLs you are confident exist.`,
-          { maxTokens: 1000 }
+          { maxTokens: 1000, model: getTaskModel('khan_videos') }
         );
         const videos = parseAIJson(khanRaw);
         if (Array.isArray(videos) && videos.length > 0) {
@@ -287,7 +309,7 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
       const tasksRaw = await aiAsk(
         `You are a study coach. Generate 10 specific, actionable study tasks based on the material. Each task should be a concrete action like "Summarize the three stages of X", "Draw a diagram of Y", "Practice Z formula with 5 examples". Write them as a student would, clear, motivating, doable. No vague tasks.`,
         `Generate 10 study tasks for this material.${goalCtx}\n\nMATERIAL:\n${truncated.slice(0, 6000)}\n\nReturn ONLY a JSON array of strings: ["task 1", "task 2", ...]`,
-        { maxTokens: 800 }
+        { maxTokens: 800, model: getTaskModel('todo_tasks') }
       );
       try {
         const tasks = parseAIJson(tasksRaw);
@@ -297,7 +319,7 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
       setGenerated(true);
       setLoadingStep('');
       setStep(0);
-      setPendingFile(null);
+      setPendingFiles([]);
       if (onMaterialReady) onMaterialReady();
     } catch (err) {
       // Only non-rate-limit errors reach here (bad key, network down, etc.)
@@ -311,8 +333,8 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
   const handleReset = () => {
     setGenerated(false); setSchedule(''); setKeyPoints(''); setKhanVideos(null);
     ['schedule', 'notes', 'planner_filename', 'raw_material', 'flashcard_deck', 'ai_questions', 'timer_configured', 'khan_videos'].forEach(k => localStorage.removeItem(tk(ns, k)));
-    setFileName('');
-    setPendingFile(null);
+    setFileNames([]);
+    setPendingFiles([]);
   };
 
   if (generated && (schedule || keyPoints)) {
@@ -322,7 +344,7 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: isDarkG ? '#c77dff' : '#4A3525', fontFamily: FONT, margin: 0 }}>AI Study Planner</h1>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            {fileName && <span style={{ fontFamily: FONT, fontSize: '0.8rem', color: '#9A8A7A' }}>File: {fileName}</span>}
+            {fileNames.length > 0 && <span style={{ fontFamily: FONT, fontSize: '0.8rem', color: '#9A8A7A' }}>File{fileNames.length > 1 ? 's' : ''}: {fileNames.join(', ')}</span>}
             <button onClick={handleReset} style={{ background: 'none', border: '1px solid #C5B8A8', borderRadius: 8, padding: '6px 14px', fontFamily: FONT, fontSize: '0.8rem', color: '#7A6A5A', cursor: 'pointer' }}>Upload New File</button>
           </div>
         </div>
@@ -334,7 +356,7 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
         </div>
 
         {activeView === 'notes' && (
-          <div style={{ background: isDarkG ? 'rgba(14,6,26,0.85)' : 'rgba(255,255,255,0.8)', borderRadius: 14, border: '2px solid #7b2d6e', padding: isMobile ? '20px 16px' : '36px 44px', maxWidth: '100%', minHeight: 600, overflowY: 'auto', backdropFilter: 'blur(16px)' }}>
+          <div ref={notesBoxRef} style={{ background: isDarkG ? 'rgba(14,6,26,0.85)' : 'rgba(255,255,255,0.8)', borderRadius: 14, border: '2px solid #7b2d6e', padding: isMobile ? '20px 16px' : '36px 44px', maxWidth: '100%', minHeight: 600, overflowY: 'auto', backdropFilter: 'blur(16px)' }}>
             <NotesRenderer text={keyPoints} />
           </div>
         )}
@@ -397,46 +419,50 @@ export default function PlannerPanel({ ns = 'default', onInjectTasks, onMaterial
           style={{ marginBottom: 20, resize: 'none', fontFamily: FONT, background: isDark ? 'rgba(30,10,46,0.7)' : undefined, color: isDark ? '#e8d5ff' : undefined }}
         />
 
-        {/* Sliders */}
-        <Slider min={1} max={12} value={hoursPerDay} onChange={setHoursPerDay} label="Hours dedicated for this material per day" unit="hrs/day" />
-        <Slider min={1} max={60} value={daysUntilTest} onChange={setDaysUntilTest} label="Days until test" unit="days" />
+        {tourStep === 3 && <TourPointer anchorRef={slidersAndDropRef} step={3} text="Insert your notes here as well as due dates to get access to all features!" placement="bottom" />}
+        <div ref={slidersAndDropRef}>
+          {/* Sliders */}
+          <Slider min={0.5} max={12} step={0.5} value={hoursPerDay} onChange={setHoursPerDay} label="Hours dedicated for this material per day" unit="hrs/day" />
+          <Slider min={1} max={60} value={daysUntilTest} onChange={setDaysUntilTest} label="Days until test" unit="days" />
 
-        {/* File drop zone */}
-        <div
-          className={`drop-zone${dragOver ? ' drag-over' : ''}`}
-          style={{ marginBottom: 16, minHeight: 140, border: '2px solid #E07B39', position: 'relative', background: isDark ? 'rgba(30,10,46,0.5)' : undefined, backdropFilter: 'blur(12px)' }}
-          onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleFileDrop}
-          onClick={() => fileRef.current?.click()}
-        >
-          <input ref={fileRef} type="file" accept=".txt,.pdf,.md,.doc,.docx,text/plain,application/pdf,image/*" style={{ display: 'none' }} onChange={handleFileInput} />
-          <button style={{ background: '#1a1a1a', color: 'white', border: 'none', borderRadius: 8, padding: '8px 18px', fontFamily: FONT, fontSize: '0.9rem', cursor: 'pointer', pointerEvents: 'none' }}>Add File</button>
-          <p style={{ fontFamily: FONT, fontSize: '0.82rem', color: '#9A8A7A', marginTop: 8 }}>Drag here: .txt, .pdf, .md, or a photo of handwritten notes</p>
-          {fileName && <p style={{ fontFamily: FONT, fontSize: '0.78rem', color: '#7b2d6e', marginTop: 4 }}>File ready: {fileName}</p>}
-          {fileName && <p onClick={e => { e.stopPropagation(); removeFile(); }} style={{ position: 'absolute', bottom: 10, right: 14, fontFamily: FONT, fontSize: '0.75rem', color: '#7b2d6e', cursor: 'pointer', textDecoration: 'underline' }}>remove file</p>}
+          {/* File drop zone */}
+          <div
+            ref={dropZoneRef}
+            className={`drop-zone${dragOver ? ' drag-over' : ''}`}
+            style={{ marginBottom: 16, minHeight: 140, border: '2px solid #E07B39', position: 'relative', background: isDark ? 'rgba(30,10,46,0.5)' : undefined, backdropFilter: 'blur(12px)' }}
+            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={handleFileDrop}
+            onClick={() => fileRef.current?.click()}
+          >
+            <input ref={fileRef} type="file" multiple accept=".txt,.pdf,.md,.doc,.docx,text/plain,application/pdf,image/*" style={{ display: 'none' }} onChange={handleFileInput} />
+            <button style={{ background: '#1a1a1a', color: 'white', border: 'none', borderRadius: 8, padding: '8px 18px', fontFamily: FONT, fontSize: '0.9rem', cursor: 'pointer', pointerEvents: 'none' }}>Add Files or Photos</button>
+            <p style={{ fontFamily: FONT, fontSize: '0.82rem', color: '#9A8A7A', marginTop: 8 }}>Drag here or select multiple: .txt, .pdf, .md, or photos of handwritten notes</p>
+            {fileNames.length > 0 && <p style={{ fontFamily: FONT, fontSize: '0.78rem', color: '#7b2d6e', marginTop: 4 }}>{fileNames.length} file{fileNames.length > 1 ? 's' : ''} ready: {fileNames.join(', ')}</p>}
+            {fileNames.length > 0 && <p onClick={e => { e.stopPropagation(); removeFile(); }} style={{ position: 'absolute', bottom: 10, right: 14, fontFamily: FONT, fontSize: '0.75rem', color: '#7b2d6e', cursor: 'pointer', textDecoration: 'underline' }}>remove files</p>}
+          </div>
+
+          {/* Generate button */}
+          <button
+            onClick={handleGenerate}
+            disabled={loading || (pendingFiles.length === 0 && !localStorage.getItem(tk(ns, 'raw_material')))}
+            style={{
+              width: '100%',
+              padding: '16px',
+              background: loading ? (isDark ? 'rgba(40,15,70,0.6)' : '#E5D8C8') : '#7b2d6e',
+              color: loading ? (isDark ? '#8060a0' : '#9A8A7A') : 'white',
+              border: 'none',
+              borderRadius: 12,
+              fontFamily: FONT,
+              fontWeight: 700,
+              fontSize: '1.1rem',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              marginBottom: 8,
+            }}
+          >
+            {loading ? 'Generating…' : 'Generate Study Plan'}
+          </button>
         </div>
-
-        {/* Generate button */}
-        <button
-          onClick={handleGenerate}
-          disabled={loading || (!pendingFile && !localStorage.getItem(tk(ns, 'raw_material')))}
-          style={{
-            width: '100%',
-            padding: '16px',
-            background: loading ? (isDark ? 'rgba(40,15,70,0.6)' : '#E5D8C8') : '#7b2d6e',
-            color: loading ? (isDark ? '#8060a0' : '#9A8A7A') : 'white',
-            border: 'none',
-            borderRadius: 12,
-            fontFamily: FONT,
-            fontWeight: 700,
-            fontSize: '1.1rem',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            marginBottom: 8,
-          }}
-        >
-          {loading ? 'Generating…' : 'Generate Study Plan'}
-        </button>
 
         {loading && (
           <div style={{ marginTop: 16 }}>
