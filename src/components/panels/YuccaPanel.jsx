@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { aiAsk, isAIConfigured, parseAIJson } from '../../lib/aiClient';
+import { aiAsk, isAIConfigured, parseAIJson, getTaskModel } from '../../lib/aiClient';
 
 const ANS_COLORS = ['#C2185B', '#E8A598', '#E07B39', '#5C3D2E'];
 const tk = (ns, key) => `camellia_${ns}_${key}`;
@@ -116,7 +116,7 @@ export default function YuccaPanel({ ns = 'default' }) {
       const raw = await aiAsk(
         'You are an expert quiz creator. Generate high-quality multiple choice questions from study material.',
         `Generate 20 multiple choice questions.\n\nMATERIAL:\n${rawMaterial.slice(0, 12000)}\n\nReturn ONLY a JSON array: [{"q":"question","options":["A","B","C","D"],"correct":0}]`,
-        { maxTokens: 3000 }
+        { maxTokens: 3000, model: getTaskModel('yucca_quiz') }
       );
       const parsed = parseAIJson(raw);
       const valid = Array.isArray(parsed) ? parsed.filter(q => q.q && Array.isArray(q.options) && q.options.length === 4 && typeof q.correct === 'number') : [];
