@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { CamelliaLogoSmall } from './CamelliaLogo';
+import { CamelliaLogoSmall, LOGO_ICON } from './CamelliaLogo';
+import { testAIConnection } from '../lib/aiClient';
 
 const SCREENS = ['name', 'goal', 'nonneg', 'picture', 'wish', 'paywall', 'aisetup'];
 
@@ -11,6 +12,9 @@ export default function Onboarding({ onComplete, onHome }) {
   const [nn2, setNn2] = useState('');
   const [nn3, setNn3] = useState('');
   const [visible, setVisible] = useState(true);
+  const [groqKey, setGroqKey] = useState('');
+  const [aiTesting, setAiTesting] = useState(false);
+  const [aiError, setAiError] = useState('');
 
   const goNext = () => {
     setVisible(false);
@@ -37,17 +41,30 @@ export default function Onboarding({ onComplete, onHome }) {
     goNext();
   };
 
-  // Supabase removed: perform a local no-op pay flow that marks onboarding complete.
-  const handlePay = async () => {
-    console.log('HANDLEPAY FIRED (no Supabase)');
-    // If you want to require a login flow, implement it elsewhere. For now, mark onboarding complete.
+  const handlePay = () => {
     localStorage.setItem('onboarding_complete', 'true');
     goNext();
   };
 
-  const handleEnterDashboard = () => {
-    setVisible(false);
-    setTimeout(() => onComplete(), 350);
+  const handleEnterDashboard = async () => {
+    if (!groqKey.trim()) {
+      setAiError('Paste your Groq API key first, you need it to enter the dashboard.');
+      return;
+    }
+    setAiTesting(true);
+    setAiError('');
+    try {
+      await testAIConnection('groq', groqKey.trim(), 'llama-3.1-8b-instant');
+      localStorage.setItem('camellia_ai_provider', 'groq');
+      localStorage.setItem('camellia_ai_key', groqKey.trim());
+      localStorage.setItem('camellia_ai_model', 'llama-3.1-8b-instant');
+      setAiTesting(false);
+      setVisible(false);
+      setTimeout(() => onComplete(), 350);
+    } catch (err) {
+      setAiTesting(false);
+      setAiError(err.message || 'That key did not work, double check it and try again.');
+    }
   };
 
   const handleKeyDown = (e, fn) => { if (e.key === 'Enter') fn(); };
@@ -161,12 +178,12 @@ export default function Onboarding({ onComplete, onHome }) {
   if (screen === 4) return (
     <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease' }}>
       <p style={{ color: 'white', fontFamily: 'Inter', fontSize: '1rem', fontWeight: 600, marginBottom: '4rem', letterSpacing: '0.02em' }}>Do you wish it would happen?</p>
-      <button className="charcoal-pill-btn" onClick={() => { /* no auth check */ goNext(); }}>yes</button>
+      <button className="charcoal-pill-btn" onClick={goNext}>yes</button>
     </div>
   );
 
   if (screen === 5) return (
-    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease' }}>
+    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease', padding: '40px' }}>
       <div style={{ textAlign: 'center', color: 'white', fontFamily: 'Inter', maxWidth: 600 }}>
         <p style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.5rem' }}>Here in Camellia, we have a paywall.</p>
         <p style={{ fontSize: '1rem', fontWeight: 500, marginBottom: '0.4rem' }}>Payment methods: time + complete focus</p>
@@ -178,54 +195,87 @@ export default function Onboarding({ onComplete, onHome }) {
   );
 
   if (screen === 6) return (
-    <div style={{ background: '#1E1E1E', minHeight: '100vh', display: 'flex', flexDirection: 'column', opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease', fontFamily: 'Inter' }}>
-      {/* Header */}
-      <header style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 32px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-        <CamelliaLogoSmall />
-        <h1 style={{ color: 'white', fontFamily: 'Inter', fontWeight: 700, fontSize: '1.2rem', margin: 0 }}>AI Setup</h1>
-      </header>
-
-      {/* Body — two equal columns */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, minHeight: 0, overflow: 'hidden' }}>
-        {/* Left: instructions */}
-        <div style={{ padding: '40px 44px', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid rgba(255,255,255,0.08)', overflowY: 'auto' }}>
-          <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', margin: '0 0 20px' }}>Quick Setup · Under 1 Minute</p>
-          <p style={{ color: 'white', fontSize: '1rem', lineHeight: 1.8, margin: '0 0 24px', fontWeight: 400 }}>
-            Look, I know it sounds complicated but this is very simple, takes less than one minute, stay with me.
-          </p>
-          <div style={{ color: 'rgba(255,255,255,0.88)', fontSize: '0.95rem', lineHeight: 1.9 }}>
-            <p style={{ margin: '0 0 6px', fontWeight: 600 }}>Go to <span style={{ color: '#F55036', fontWeight: 700 }}>Groq.com</span> on your phone</p>
-            <ul style={{ margin: '0 0 16px', paddingLeft: 20, listStyle: 'disc' }}>
-              <li>Click on <strong>"Free API Key"</strong> under Developers in the sidebar</li>
-              <li>Create an account with your spare Google/Github account</li>
-              <li>Create an API Key and name it <strong>Camellia</strong>, set expiration date depending on your needs</li>
-              <li>Copy and send API Key to your current device and click <strong>"Done"</strong></li>
-            </ul>
-            <p style={{ margin: '0 0 24px', color: 'rgba(255,255,255,0.7)', fontSize: '0.88rem' }}>
-              Congrats! You have your own free AI provider. Plug this API key in our settings once you create your first study tab in the next page.
-            </p>
+    <div style={{ background: '#181818', minHeight: '100vh', display: 'grid', gridTemplateColumns: '1fr 1fr', opacity: visible ? 1 : 0, transition: 'opacity 0.28s ease', fontFamily: 'Inter' }}>
+      {/* Left: Groq setup instructions */}
+      <div style={{ padding: '40px 48px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
+          <img src={LOGO_ICON} alt="Camellia" style={{ width: 52, height: 52, objectFit: 'contain', borderRadius: 12 }} />
+          <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.1rem', letterSpacing: '2px' }}>•••</span>
+          <div style={{ background: '#F0472E', borderRadius: 12, width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: 'white', fontWeight: 700, fontSize: '1.1rem', fontFamily: 'Inter' }}>Groq</span>
           </div>
+        </div>
+
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', margin: '0 0 8px' }}>Quick Setup. 1 minute</p>
+        <p style={{ color: 'white', fontSize: '0.82rem', margin: '0 0 10px' }}>
+          Go to <a href="https://console.groq.com" target="_blank" rel="noreferrer" style={{ color: 'white', textDecoration: 'underline' }}>console.groq.com</a>
+        </p>
+        <ul style={{ color: 'white', fontSize: '0.78rem', lineHeight: 1.7, margin: '0 0 14px', paddingLeft: 16, listStyle: 'disc' }}>
+          <li>Create an account with your Google/Github account</li>
+          <li>Create an API Key and name it Camellia, set expiration date depending on your needs</li>
+          <li>Copy and paste your private API key below (starts with gsk...)</li>
+        </ul>
+
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: 12, marginBottom: 12 }}>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', lineHeight: 1.7, margin: 0 }}>
+            You will be able to change your API key to other providers in settings afterwards.<br />
+            Never share future paid API keys with malicious software or individuals.<br />
+            Groq and Grok are not the same company.
+          </p>
+        </div>
+
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: 12, marginBottom: 12 }}>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', lineHeight: 1.5, margin: '0 0 6px' }}>
+            Camellia is an independent website and is not affiliated with, sponsored by, or endorsed by Groq, LLC.
+          </p>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', lineHeight: 1.7, margin: 0 }}>
+            Privacy Policy: <a href="https://groq.com/privacy-policy" target="_blank" rel="noreferrer" style={{ color: 'rgba(255,255,255,0.65)', textDecoration: 'underline' }}>https://groq.com/privacy-policy</a><br />
+            Developer Legal & Data Notices: <a href="https://console.groq.com/docs/legal" target="_blank" rel="noreferrer" style={{ color: 'rgba(255,255,255,0.65)', textDecoration: 'underline' }}>https://console.groq.com/docs/legal</a>
+          </p>
+        </div>
+
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: 14 }}>
+          <p style={{ color: 'white', fontSize: '0.78rem', margin: '0 0 12px' }}>Congrats! You have your own free AI provider. Enter your API key below.</p>
+          <p style={{ color: 'white', fontSize: '0.78rem', fontWeight: 600, margin: '0 0 6px' }}>Groq API key</p>
+          <input
+            type="text"
+            value={groqKey}
+            onChange={e => setGroqKey(e.target.value)}
+            placeholder="gsk_..."
+            style={{ background: '#2a2a2a', border: '1px solid #444', borderRadius: 8, padding: '9px 14px', color: 'white', fontFamily: 'Inter', fontSize: '0.82rem', outline: 'none', marginBottom: 10, width: '100%', maxWidth: 260, boxSizing: 'border-box' }}
+          />
+          {aiError && <p style={{ color: '#ff8080', fontSize: '0.75rem', margin: '0 0 10px' }}>{aiError}</p>}
           <button
             onClick={handleEnterDashboard}
-            style={{ background: '#F3EEF8', color: '#2D1B0E', border: '1.5px solid #ddd', borderRadius: 12, padding: '14px 40px', fontSize: '1.05rem', fontWeight: 500, cursor: 'pointer' }}
+            disabled={aiTesting}
+            style={{ background: '#F3EEF8', color: '#2D1B0E', border: '1.5px solid #ddd', borderRadius: 10, padding: '10px 28px', fontSize: '0.85rem', fontWeight: 500, cursor: aiTesting ? 'not-allowed' : 'pointer', fontFamily: 'Inter', transition: 'background 0.2s' }}
             onMouseEnter={e => e.currentTarget.style.background = '#e8e0f5'}
             onMouseLeave={e => e.currentTarget.style.background = '#F3EEF8'}
           >
-            Enter Dashboard →
+            {aiTesting ? 'Verifying key…' : 'Enter Dashboard →'}
           </button>
         </div>
+      </div>
 
-        {/* Right: looping video */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', background: 'rgba(0,0,0,0.3)' }}>
-          <video
-            src="https://media.base44.com/videos/public/6a36d7f24a9a8c3a2c9b47d9/d9fbbc4fa_GroqTutorial.mp4"
-            autoPlay
-            loop
-            muted
-            playsInline
-            style={{ width: '100%', maxWidth: '100%', height: 'auto', maxHeight: '70vh', borderRadius: 16, boxShadow: '0 16px 48px rgba(0,0,0,0.6)', objectFit: 'contain' }}
-          />
-        </div>
+      {/* Right: Why do I need this */}
+      <div style={{ background: '#0f0f0f', padding: '40px 48px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <h1 style={{ color: 'white', fontFamily: 'Inter', fontWeight: 800, fontSize: '1.7rem', margin: '0 0 14px', textAlign: 'center' }}>Why do I need this?</h1>
+        <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.82rem', lineHeight: 1.7, textAlign: 'center', margin: '0 0 20px' }}>
+          To keep Camellia free and secure, we use a system called BYOK (Bring Your Own Key). By connecting your own developer's key to Groq's AI provider, we can ensure data privacy and you gaining absolute control over your own data.
+        </p>
+        <ul style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.78rem', lineHeight: 1.7, margin: '0 0 20px', paddingLeft: 18, maxWidth: 380, alignSelf: 'center', listStyle: 'disc' }}>
+          <li><strong>No middleman:</strong> This key gives you direct access to Groq's high speed AI hardware, bypassing the costly middleman markups.</li>
+          <li><strong>Control:</strong> Because your data is only stored and handled with your key, no one would be able to read or access your privacy.</li>
+          <li><strong>Zero Cost:</strong> Groq introduced free-tier AI developer's key for website building. No payment or cards needed.</li>
+        </ul>
+        <video
+          src="https://media.base44.com/videos/public/6a36d7f24a9a8c3a2c9b47d9/d9fbbc4fa_GroqTutorial.mp4"
+          autoPlay
+          loop
+          muted
+          playsInline
+          style={{ width: '100%', maxWidth: 380, alignSelf: 'center', height: 'auto', borderRadius: 8, boxShadow: '0 10px 30px rgba(0,0,0,0.6)', objectFit: 'contain' }}
+        />
       </div>
     </div>
   );
