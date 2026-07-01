@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { CamelliaLogoChatMini } from '../CamelliaLogo';
-import { aiChat, isAIConfigured } from '../../lib/aiClient';
+import { aiChat, isAIConfigured, getTaskModel } from '../../lib/aiClient';
 import { useDarkMode } from '../../lib/DarkModeContext';
 import ReactMarkdown from 'react-markdown';
 import AIProgressBar, { useAIProgress } from '../AIProgressBar';
@@ -85,7 +85,7 @@ Use this material as your primary knowledge source. When the student asks questi
     ];
 
     try {
-      const answer = await aiChat(apiMessages, { maxTokens: 1500 });
+      const answer = await aiChat(apiMessages, { maxTokens: 1500, model: getTaskModel('ask_chat') });
       finishProgress();
       setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
     } catch (e) {
