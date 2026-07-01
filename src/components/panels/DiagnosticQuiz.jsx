@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { aiAsk, isAIConfigured, parseAIJson } from '../../lib/aiClient';
+import { aiAsk, isAIConfigured, parseAIJson, getTaskModel } from '../../lib/aiClient';
 import { useDarkMode } from '../../lib/DarkModeContext';
 import AIProgressBar, { useAIProgress } from '../AIProgressBar';
 
@@ -48,7 +48,7 @@ function FullResults({ results, questions, dark, onClose }) {
       const ans = await aiAsk(
         `You are a helpful study tutor. Answer the student's follow-up question clearly and concisely.`,
         `Original question: "${q.q}"\nCorrect answer: "${q.options[q.correct]}"\nStudent follow-up: "${followUpQ}"\n\nGive a clear, educational answer in 2-4 sentences.`,
-        { maxTokens: 300 }
+        { maxTokens: 300, model: getTaskModel('quiz_followup') }
       );
       setFollowUpAns(ans);
     } catch {
@@ -365,7 +365,7 @@ export default function DiagnosticQuiz({ ns = 'default', onComplete, onClose }) 
       const raw = await aiAsk(
         `You are an expert diagnostic quiz creator. Generate exactly 25 multiple-choice questions spanning easy, medium, and hard difficulty. Return ONLY a valid JSON array, no prose, no markdown, no explanation outside the JSON.`,
         `Generate 25 multiple-choice questions from this material.\n\nMATERIAL:\n${rawMaterial.slice(0, 12000)}\n\nRespond with ONLY a JSON array (no markdown fences, no other text): [{"q":"question","options":["A","B","C","D"],"correct":0,"explanation":"brief explanation"}]`,
-        { maxTokens: 5000 }
+        { maxTokens: 5000, model: getTaskModel('diagnostic_quiz') }
       );
       let parsed = null;
       try { parsed = parseAIJson(raw); } catch {}
@@ -484,7 +484,7 @@ export default function DiagnosticQuiz({ ns = 'default', onComplete, onClose }) 
         </div>
 
         {/* Question */}
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '28px 24px 24px', maxWidth: 680, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '28px 24px 24px', maxWidth: 680, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
           <p style={{ fontFamily: FONT, fontWeight: 700, fontSize: '1.2rem', color: textPrimary, lineHeight: 1.4, margin: '0 0 20px', textAlign: 'center' }}>{q.q}</p>
 
           {selected === null ? (
