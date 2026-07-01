@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { aiAsk, isAIConfigured, getAIConfig } from '../../lib/aiClient';
+import { aiAsk, isAIConfigured, getAIConfig, getTaskModel } from '../../lib/aiClient';
 import { useDarkMode } from '../../lib/DarkModeContext';
 
 const FONT = "'Roboto', Arial, Helvetica, sans-serif";
@@ -91,7 +91,7 @@ export default function PodcastPanel({ ns = 'default' }) {
       const podcastScript = await aiAsk(
         `You are a professional podcast script writer. Create an engaging, educational podcast script for two hosts: Winston (curious, enthusiastic) and Jacob (knowledgeable, witty). Format EVERY spoken line as exactly "Winston:" or "Jacob:" followed by their dialogue. Include detailed exploration of all key concepts, test tips, memorization tricks, real-world examples, analogies, quizzes between hosts, spaced repetition of key facts, and a thorough summary. Natural pacing, back-and-forth conversation, light humor. Do not use em-dashes. Use commas or restructure sentences instead.`,
         `Create a detailed 10-minute podcast script (80+ exchanges between Winston and Jacob) covering ALL major topics. Each line must start with "Winston:" or "Jacob:".${customInstructions}\n\nSTUDY MATERIAL:\n${rawMaterial.slice(0, 16000)}`,
-        { maxTokens: 6000 }
+        { maxTokens: 6000, model: getTaskModel('podcast_script') }
       );
       setScript(podcastScript);
       localStorage.setItem(tk(ns, 'podcast_script'), podcastScript);
