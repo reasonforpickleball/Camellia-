@@ -338,7 +338,7 @@ export default function PracticeSession({ practiceSet, onClose }) {
       </div>
 
       {/* Question */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '28px 24px 24px', maxWidth: 680, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '28px 24px 24px', maxWidth: 680, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
         <p style={{ fontFamily: FONT, fontWeight: 700, fontSize: '1.2rem', color: textPrimary, lineHeight: 1.4, margin: '0 0 24px' }}>{q.q}</p>
 
         {selected === null ? (
