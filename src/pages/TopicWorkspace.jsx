@@ -20,6 +20,9 @@ import PopQuiz from '../components/PopQuiz';
 import BreakScreen from '../components/BreakScreen';
 import { incrementSessions, addStudyMinutes, recordWeekMinutes } from '../lib/stats';
 import { useDarkMode } from '../lib/DarkModeContext';
+import { getTourStep, setTourStep } from '../lib/tourStore';
+import useTourStep from '../hooks/useTourStep';
+import TourMultiPointer from '../components/TourMultiPointer';
 
 const fmt = (secs) => {
   const h = Math.floor(secs / 3600);
@@ -57,6 +60,9 @@ export default function TopicWorkspace({ topic, onBack }) {
   const [materialReady, setMaterialReady] = useState(() => topicHasMaterial(ns));
   const [isTimerConfigured, setIsTimerConfigured] = useState(() => topicTimerConfigured(ns));
   const [activeTab, setActiveTab] = useState(() => topicHasMaterial(ns) ? 'timer' : 'planner');
+  const tourStep = useTourStep();
+  const quizzesNavRef = useRef(null);
+  const notesBoxRef = useRef(null);
 
   const [pomConfig, setPomConfig] = useState({ studyMin: 25, restMin: 5, repeat: 4 });
   const [pomRunning, setPomRunning] = useState(false);
@@ -125,12 +131,12 @@ export default function TopicWorkspace({ topic, onBack }) {
     localStorage.setItem(tk(ns, 'timer_configured'), 'true');
     incrementSessions();
     startTick();
-    try { document.documentElement.requestFullscreen?.(); } catch {}
+    if (getTourStep() === 0) { try { document.documentElement.requestFullscreen?.(); } catch {} }
     setActiveTab('timer');
   };
 
   const handleEscape = useCallback(() => {
-    if (!pomRunning || pomPhase !== 'study' || escapeVisible || popQuizVisible) return;
+    if (!pomRunning || pomPhase !== 'study' || escapeVisible || popQuizVisible || getTourStep() !== 0) return;
     clearInterval(intervalRef.current);
     frozenSecsRef.current = pomSecsLeft;
     setEscapeVisible(true);
@@ -183,12 +189,16 @@ export default function TopicWorkspace({ topic, onBack }) {
       if (materialReady) { setActiveTab('timer'); return; }
       shakeRef.current?.(); return;
     }
+    // During the guided tour, every unlocked tab (per Sidebar) should actually be clickable
+    if (tourStep >= 1 && tourStep <= 6) { setActiveTab(tab); return; }
     if (!isTimerConfigured) { shakeRef.current?.(); return; }
     setActiveTab(tab);
   };
 
   const handleMaterialReady = () => {
     setMaterialReady(true);
+    // During the guided tour, stay on the planner so the user can see the generated notes (step 4)
+    if (getTourStep() === 3) { setTourStep(4); return; }
     setActiveTab('timer');
   };
 
@@ -223,7 +233,7 @@ export default function TopicWorkspace({ topic, onBack }) {
       case 'activerecall':return <ActiveRecallPanel timerDisplay={pomDisplay} storageKey={tk(ns, 'ar')} />;
       case 'feynman':     return <FeynmanPanel timerDisplay={pomDisplay} storageKey={tk(ns, 'feynman')} />;
       case 'cornell':     return <CornellPanel timerDisplay={pomDisplay} storageKey={tk(ns, 'cornell')} />;
-      case 'planner':     return <PlannerPanel ns={ns} onInjectTasks={handleInjectTasks} onMaterialReady={handleMaterialReady} isTimerConfigured={isTimerConfigured} />;
+      case 'planner':     return <PlannerPanel ns={ns} onInjectTasks={handleInjectTasks} onMaterialReady={handleMaterialReady} isTimerConfigured={isTimerConfigured} notesBoxRef={notesBoxRef} />;
       case 'flashcards':  return <FlashcardPanel ns={ns} />;
       case 'quizzes':     return <QuizzesPanel ns={ns} />;
       case 'ask':         return <AskPanel ns={ns} />;
@@ -255,10 +265,18 @@ export default function TopicWorkspace({ topic, onBack }) {
             topicName={topic}
             onBack={onBack}
             showBack
+            quizzesRef={quizzesNavRef}
           />
           <div className="workspace" style={{ flex: 1, background: workspaceBg }}>
             {renderPanel()}
           </div>
+          {tourStep === 4 && activeTab === 'planner' && (
+            <TourMultiPointer
+              anchors={[{ ref: quizzesNavRef, placement: 'right' }, { ref: notesBoxRef, placement: 'left' }]}
+              step={4}
+              text="Here's your generated study guide, take a look, then head to Quizzes to test yourself!"
+            />
+          )}
         </div>
       )}
     </>
