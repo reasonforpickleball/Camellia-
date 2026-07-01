@@ -33,16 +33,6 @@ export function saveIntelDB(db) {
 }
 
 export function isCoachSetupComplete() {
-  // Auto-complete: if there's ANY study data, skip setup
-  const ns = getAllNamespaces();
-  for (const n of ns) {
-    if (
-      localStorage.getItem(tk(n, 'raw_material')) ||
-      localStorage.getItem(tk(n, 'recent_quizzes')) ||
-      localStorage.getItem(tk(n, 'ai_questions')) ||
-      localStorage.getItem(tk(n, 'flashcard_deck'))
-    ) return true;
-  }
   return localStorage.getItem(COACH_SETUP_KEY) === 'true';
 }
 
