@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { aiAsk, isAIConfigured } from '../../lib/aiClient';
+import { aiAsk, isAIConfigured, getTaskModel } from '../../lib/aiClient';
 import { useDarkMode } from '../../lib/DarkModeContext';
 import ReactMarkdown from 'react-markdown';
 
@@ -51,7 +51,7 @@ Check: Are the facts real? Are the events real? Is any part fabricated or false?
 
 Return ONLY a valid JSON object:
 {"overallScore":75,"grade":"B","summary":"2-3 sentence assessment including fact-check verdict.","factCheckResult":"PASS or FAIL with explanation of what is true/false","scores":{"thesis":{"score":15,"comment":"feedback"},"evidence":{"score":14,"comment":"feedback"},"structure":{"score":15,"comment":"feedback"},"clarity":{"score":16,"comment":"feedback"},"grammar":{"score":15,"comment":"feedback"},"factAccuracy":{"score":20,"comment":"fact-check detail"}},"strengths":["strength 1","strength 2"],"improvements":["improvement 1","improvement 2","improvement 3"],"suggestions":"Detailed suggestions here.","wordCount":${wordCount}}`,
-        { maxTokens: 2000 }
+        { maxTokens: 2000, model: getTaskModel('essay_analysis') }
       );
 
       // Robust JSON extraction
