@@ -1,6 +1,11 @@
 import React, { useState, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { getStats, getWeeklyActivity } from '../../lib/stats';
 import { useDarkMode } from '../../lib/DarkModeContext';
+import useTourStep from '../../hooks/useTourStep';
+import { setTourStep, finishTour } from '../../lib/tourStore';
+import TourPointer from '../TourPointer';
+import StudyProgressTracker from '../StudyProgressTracker';
 import {
   buildSubjectsFromSessions,
   generateDailyPlan,
@@ -126,6 +131,10 @@ export default function StatsPanel({ onTopicClick }) {
   const [dragOver, setDragOver] = useState(false);
   const [picFile, setPicFile] = useState(null);
   const picInputRef = useRef();
+  const tourStep = useTourStep();
+  const plusBtnRef = useRef(null);
+  const lastTopicRef = useRef(null);
+  const coachTabRef = useRef(null);
 
   const PALETTE = [
     '#3333CC','#7733CC','#9999DD','#2E7D00','#55BB00','#99DD55','#006699','#1188CC',
@@ -182,6 +191,7 @@ export default function StatsPanel({ onTopicClick }) {
     localStorage.setItem('doomium_topic_colors', JSON.stringify(existing));
     saveTopics([...topics, newTopic.trim()]);
     setNewTopic(''); setTopicColor('#E8A0D0'); setShowTopicModal(false);
+    if (tourStep === 1) setTourStep(2);
   };
 
   const handlePicFile = (file) => {
@@ -218,7 +228,7 @@ export default function StatsPanel({ onTopicClick }) {
       {/* ── Tab switcher ── */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 28, background: dark ? 'rgba(22,14,36,0.6)' : 'rgba(255,255,255,0.6)', border: `1px solid ${borderCol}`, borderRadius: 14, padding: 4, width: 'fit-content', backdropFilter: 'blur(12px)' }}>
         {[{ id: 'dashboard', label: 'Dashboard' }, { id: 'coach', label: 'Coach' }].map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+          <button key={t.id} ref={t.id === 'coach' ? coachTabRef : null} onClick={() => { setActiveTab(t.id); if (t.id === 'coach' && tourStep === 6) finishTour(); }} style={{
             padding: '9px 22px', border: 'none', borderRadius: 10, cursor: 'pointer',
             background: activeTab === t.id ? '#7b2d6e' : 'transparent',
             color: activeTab === t.id ? 'white' : textSecondary,
@@ -446,10 +456,11 @@ export default function StatsPanel({ onTopicClick }) {
             <p style={{ fontFamily: FONT, fontSize: '0.75rem', color: textSecondary, margin: 0 }}>Each tab has its own workspace, AI tools, and coach tracking</p>
           </div>
         </div>
+        <StudyProgressTracker topics={topics} dark={dark} textSecondary={textSecondary} borderCol={borderCol} />
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
           {topics.map((t, i) => (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', cursor: 'pointer' }}
-              onClick={() => onTopicClick && onTopicClick(t)}>
+            <div key={i} ref={i === topics.length - 1 ? lastTopicRef : null} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', cursor: 'pointer' }}
+              onClick={() => { if (tourStep === 2) setTourStep(3); onTopicClick && onTopicClick(t); }}>
               <span onClick={e => { e.stopPropagation(); removeTopic(i); }}
                 style={{ position: 'absolute', top: -4, right: -4, color: 'red', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', zIndex: 2, background: 'white', borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>x</span>
               <div style={{ width: 64, height: 64, borderRadius: '50%', background: topicColors[t] || '#E8A0D0', opacity: 0.85, transition: 'transform 0.15s' }}
@@ -459,10 +470,14 @@ export default function StatsPanel({ onTopicClick }) {
               <span style={{ fontSize: '0.78rem', fontFamily: FONT, color: textPrimary, marginTop: 6, textAlign: 'center', maxWidth: 72 }}>{t}</span>
             </div>
           ))}
-          <button onClick={() => setShowTopicModal(true)}
+          <button ref={plusBtnRef} onClick={() => setShowTopicModal(true)}
             style={{ width: 36, height: 36, borderRadius: '50%', background: 'none', border: 'none', fontSize: '1.6rem', color: '#7b2d6e', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 300 }}>+</button>
         </div>
       </div>
+
+      {tourStep === 1 && <TourPointer anchorRef={plusBtnRef} step={1} text="Welcome! Create a study tab to get started!" placement="right" />}
+      {tourStep === 2 && <TourPointer anchorRef={lastTopicRef} step={2} text="Click on the Study Tab tab to start learning!" placement="right" />}
+      {tourStep === 6 && activeTab === 'dashboard' && <TourPointer anchorRef={coachTabRef} step={6} text="Now check your stats over at Coach!" placement="bottom" />}
 
       {/* ── Modals (always rendered, outside tab condition) ── */}
       {showDiagnostic && (
@@ -480,11 +495,11 @@ export default function StatsPanel({ onTopicClick }) {
       {/* ── End dashboard tab ── */}
       </>}
 
-      {showTopicModal && (
+      {showTopicModal && createPortal(
         <div className="modal-overlay" onClick={() => setShowTopicModal(false)}>
           <div className="modal-box" onClick={e => e.stopPropagation()} style={{ background: dark ? 'rgba(22,14,36,0.95)' : 'rgba(255,255,255,0.95)', backdropFilter: 'blur(24px)', border: `1px solid ${borderCol}` }}>
             <button onClick={() => setShowTopicModal(false)} style={{ position: 'absolute', top: 14, right: 18, color: 'red', background: 'none', border: 'none', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>x</button>
-            <h3 style={{ fontFamily: FONT, fontWeight: 600, fontSize: '1.2rem', textAlign: 'center', marginBottom: 24, color: dark ? '#e8d5ff' : '#2D1B0E' }}>New Study Topic</h3>
+            <h3 style={{ fontFamily: FONT, fontWeight: 600, fontSize: '1.2rem', textAlign: 'center', marginBottom: 24, color: dark ? '#e8d5ff' : '#2D1B0E' }}>Name your Study Tab!</h3>
             <input className="orange-input" style={{ border: '2px solid #7b2d6e', marginTop: 0, marginBottom: 20, borderRadius: 24 }}
               placeholder="(ex. Chem Unit 3)" value={newTopic} onChange={e => setNewTopic(e.target.value)} onKeyDown={e => e.key === 'Enter' && createTopic()} autoFocus />
             <label style={{ fontFamily: FONT, fontSize: '0.9rem', color: dark ? '#c77dff' : '#7b2d6e', fontWeight: 600, display: 'block', marginBottom: 10 }}>Pick a color:</label>
@@ -498,7 +513,8 @@ export default function StatsPanel({ onTopicClick }) {
               <button onClick={createTopic} style={{ background: topicColor, color: ['#FFFFFF','#EEEEEE','#CCCCCC','#AAAAAA','#FFAA44','#DDCC00'].includes(topicColor) ? '#2D1B0E' : 'white', border: 'none', borderRadius: 20, padding: '12px 40px', fontFamily: 'Inter', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer' }}>Create!</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {showPicModal && (
