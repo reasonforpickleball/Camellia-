@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { aiAsk, isAIConfigured, parseAIJson } from '../../lib/aiClient';
+import { aiAsk, isAIConfigured, parseAIJson, getTaskModel } from '../../lib/aiClient';
 import { useDarkMode } from '../../lib/DarkModeContext';
 
 const TOTAL_ROWS = 12;
@@ -45,7 +45,7 @@ export default function TodoPanel({ storageKey = 'doomium_tasks', ns = 'default'
       const raw = await aiAsk(
         `You are a study coach creating a personalized to-do list for a student. Generate specific, actionable study tasks.`,
         `Generate exactly 10 specific study tasks from this material.\n\nMATERIAL:\n${rawMaterial.slice(0, 10000)}\n\nReturn ONLY a JSON array of 10 strings: ["task 1", "task 2", ...]`,
-        { maxTokens: 800 }
+        { maxTokens: 800, model: getTaskModel('todo_tasks') }
       );
       const taskArr = parseAIJson(raw);
       if (!Array.isArray(taskArr) || taskArr.length === 0) { setGenError('AI returned unexpected format. Try again.'); setGenerating(false); return; }
