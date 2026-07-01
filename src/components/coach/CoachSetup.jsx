@@ -226,7 +226,7 @@ export default function CoachSetup({ onComplete }) {
             <div style={{ marginTop: 20 }}>
               <label style={{ fontFamily: FONT, fontSize: '0.85rem', fontWeight: 600, color: textSecondary, display: 'block', marginBottom: 8 }}>How many days per week do you study?</label>
               <div style={{ display: 'flex', gap: 8 }}>
-                {[3, 4, 5, 6, 7].map(d => (
+                {[1, 2, 3, 4, 5, 6, 7].map(d => (
                   <button key={d} style={pillBtn(answers.studyDays === d)} onClick={() => set('studyDays', d)}>{d}</button>
                 ))}
               </div>
