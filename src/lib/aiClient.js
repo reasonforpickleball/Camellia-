@@ -21,10 +21,36 @@ export function isAIConfigured() {
   return !!apiKey && apiKey.length > 10;
 }
 
+// ── Task-based model selection ─────────────────────────────────────────────
+// Each feature picks the model tier best suited to it (quality for long-form
+// generation, fast for quick grading/short answers), resolved to a specific,
+// currently-supported model for whichever provider the user has configured.
+const TASK_MODELS = {
+  openai:    { fast: 'gpt-4o-mini',              quality: 'gpt-4o-mini' },
+  anthropic: { fast: 'claude-3-5-haiku-20241022', quality: 'claude-3-5-sonnet-20241022' },
+  google:    { fast: 'gemini-2.5-flash-lite',     quality: 'gemini-2.5-flash' },
+  groq:      { fast: 'llama-3.1-8b-instant',      quality: 'llama-3.3-70b-versatile' },
+};
+
+const TASK_TIER = {
+  notes: 'quality', schedule: 'quality', flashcards: 'quality', flashcard_regen: 'quality',
+  essay_analysis: 'quality', podcast_script: 'quality', ask_chat: 'quality', diagnostic_quiz: 'quality',
+  quiz_gen: 'fast', quiz_grade: 'fast', quiz_explain: 'fast', quiz_followup: 'fast',
+  khan_videos: 'fast', todo_tasks: 'fast', yucca_quiz: 'fast',
+};
+
+export function getTaskModel(task) {
+  const { provider } = getAIConfig();
+  const tier = TASK_TIER[task] || 'fast';
+  return TASK_MODELS[provider]?.[tier];
+}
+
 // ── Raw provider transports (private — called ONLY through AI_GATEWAY) ────────
 
 async function _callOpenAI(messages, config, opts = {}) {
-  const model = opts.model || config.model || 'gpt-4o-mini';
+  const hasImages = opts.file_urls && opts.file_urls.length > 0;
+  // gpt-4o-mini supports vision; ensure we never send images to a non-vision model
+  const model = opts.model || (hasImages ? 'gpt-4o-mini' : config.model) || 'gpt-4o-mini';
   // If file_urls provided, convert last user message to multimodal content
   let finalMessages = messages;
   if (opts.file_urls && opts.file_urls.length > 0) {
@@ -55,12 +81,29 @@ async function _callOpenAI(messages, config, opts = {}) {
   return data.choices?.[0]?.message?.content || '';
 }
 
+function _parseDataUrl(url) {
+  const match = /^data:(.+?);base64,(.+)$/.exec(url);
+  return match ? { mediaType: match[1], data: match[2] } : null;
+}
+
 async function _callAnthropic(messages, config, opts = {}) {
-  const model = opts.model || config.model || 'claude-3-5-haiku-20241022';
+  const hasImages = opts.file_urls && opts.file_urls.length > 0;
+  // Claude 3.5 Haiku does NOT support image input — switch to Sonnet (vision-capable) when a photo is attached
+  const model = opts.model || (hasImages ? 'claude-3-5-sonnet-20241022' : config.model) || 'claude-3-5-haiku-20241022';
   const system = messages.find(m => m.role === 'system')?.content || '';
-  const conv = messages.filter(m => m.role !== 'system').map(m => ({
-    role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content,
-  }));
+  const nonSystem = messages.filter(m => m.role !== 'system');
+  const conv = nonSystem.map((m, i) => {
+    const role = m.role === 'assistant' ? 'assistant' : 'user';
+    if (role === 'user' && i === nonSystem.length - 1 && opts.file_urls?.length > 0) {
+      const content = [{ type: 'text', text: m.content }];
+      opts.file_urls.forEach(url => {
+        const parsed = _parseDataUrl(url);
+        if (parsed) content.push({ type: 'image', source: { type: 'base64', media_type: parsed.mediaType, data: parsed.data } });
+      });
+      return { role, content };
+    }
+    return { role, content: m.content };
+  });
   if (!conv.length || conv[0].role !== 'user') throw new Error('Anthropic requires at least one user message.');
   const resp = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -86,9 +129,12 @@ async function _callGoogle(messages, config, opts = {}) {
   const system = messages.find(m => m.role === 'system')?.content || '';
   const conv = messages.filter(m => m.role !== 'system').map((m, i, arr) => {
     const parts = [{ text: m.content }];
-    // Attach images to last user message
+    // Attach images to last user message (inline base64, not a hosted file URI)
     if (m.role === 'user' && i === arr.length - 1 && opts.file_urls?.length > 0) {
-      opts.file_urls.forEach(url => parts.push({ inlineData: undefined, fileData: { mimeType: 'image/jpeg', fileUri: url } }));
+      opts.file_urls.forEach(url => {
+        const parsed = _parseDataUrl(url);
+        if (parsed) parts.push({ inlineData: { mimeType: parsed.mediaType, data: parsed.data } });
+      });
     }
     return { role: m.role === 'assistant' ? 'model' : 'user', parts };
   });
@@ -113,11 +159,25 @@ async function _callGoogle(messages, config, opts = {}) {
 }
 
 async function _callGroq(messages, config, opts = {}) {
-  const model = opts.model || config.model || 'llama-3.1-8b-instant';
+  const hasImages = opts.file_urls && opts.file_urls.length > 0;
+  // Groq's default text models cannot see images — switch to a vision-capable model when a photo is attached
+  const model = opts.model || (hasImages ? 'meta-llama/llama-4-scout-17b-16e-instruct' : config.model) || 'llama-3.1-8b-instant';
+  let finalMessages = messages;
+  if (hasImages) {
+    finalMessages = messages.map((m, i) => {
+      if (m.role === 'user' && i === messages.length - 1) {
+        return { role: 'user', content: [
+          { type: 'text', text: m.content },
+          ...opts.file_urls.map(url => ({ type: 'image_url', image_url: { url } })),
+        ]};
+      }
+      return m;
+    });
+  }
   const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.apiKey}` },
-    body: JSON.stringify({ model, messages, temperature: opts.temperature ?? 0.7, max_tokens: opts.maxTokens ?? 2000 }),
+    body: JSON.stringify({ model, messages: finalMessages, temperature: opts.temperature ?? 0.7, max_tokens: opts.maxTokens ?? 2000 }),
   });
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({}));
@@ -169,8 +229,30 @@ export async function aiAsk(systemPrompt, userPrompt, opts = {}) {
 }
 
 export function parseAIJson(text) {
-  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
-  return JSON.parse(cleaned);
+  let cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+  // Strip any leading prose before the actual JSON structure
+  const firstBracket = Math.min(
+    ...['[', '{'].map(ch => { const i = cleaned.indexOf(ch); return i === -1 ? Infinity : i; })
+  );
+  if (firstBracket !== Infinity && firstBracket > 0) cleaned = cleaned.slice(firstBracket);
+  const openChar = cleaned[0];
+  const closeChar = openChar === '[' ? ']' : '}';
+  const lastClose = cleaned.lastIndexOf(closeChar);
+  if (lastClose !== -1) cleaned = cleaned.slice(0, lastClose + 1);
+  // Remove trailing commas before closing brackets (common AI formatting slip)
+  cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    // Response likely got truncated (token limit) mid-array — salvage complete items
+    if (openChar === '[') {
+      const lastComplete = cleaned.lastIndexOf('},');
+      if (lastComplete !== -1) {
+        return JSON.parse(cleaned.slice(0, lastComplete + 1) + ']');
+      }
+    }
+    throw e;
+  }
 }
 
 export { fallback as aiFallback };
