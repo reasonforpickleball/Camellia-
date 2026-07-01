@@ -24,6 +24,8 @@ import TopicWorkspace from './TopicWorkspace';
 import { incrementSessions, addStudyMinutes, recordWeekMinutes, tickMinuteSpent } from '../lib/stats';
 import { DarkModeToggle, useDarkMode } from '../lib/DarkModeContext';
 import StreakBadgePopup from '../components/StreakBadgePopup';
+import WelcomeSurvey from '../components/WelcomeSurvey';
+import { startTour } from '../lib/tourStore';
 
 const fmt = (secs) => {
   const h = Math.floor(secs / 3600);
@@ -52,6 +54,12 @@ export default function Dashboard() {
   const [materialReady, setMaterialReady] = useState(hasMaterial);
 
   const [isTimerConfigured, setIsTimerConfigured] = useState(() => !!localStorage.getItem('doomium_timer_configured'));
+
+  // First-run welcome survey, followed by the interactive guided tour
+  const [showSurvey, setShowSurvey] = useState(() => !localStorage.getItem('camellia_survey_complete'));
+  const onboardingOverlay = showSurvey
+    ? <WelcomeSurvey onComplete={() => { setShowSurvey(false); startTour(); }} />
+    : null;
 
   // Pomodoro state
   const [pomConfig, setPomConfig] = useState({ studyMin: 25, restMin: 5, repeat: 4 });
@@ -278,6 +286,7 @@ export default function Dashboard() {
   if (view === 'stats') {
     return (
       <>
+        {onboardingOverlay}
         <StreakBadgePopup />
         {escapeVisible && <EscapeOverlay countdown={escapeCountdown} onReturnFullscreen={handleReturnFullscreen} userName={userName} userGoal={userGoal} nn1={nn1} nn2={nn2} nn3={nn3} />}
         {popQuizVisible && <PopQuiz onComplete={handlePopQuizComplete} />}
@@ -376,6 +385,7 @@ export default function Dashboard() {
 
   return (
     <>
+      {onboardingOverlay}
       {showBreak && <BreakScreen display={fmt(pomSecsLeft)} interval={pomInterval} totalIntervals={pomConfig.repeat} />}
       {escapeVisible && <EscapeOverlay countdown={escapeCountdown} onReturnFullscreen={handleReturnFullscreen} userName={userName} userGoal={userGoal} nn1={nn1} nn2={nn2} nn3={nn3} />}
       {popQuizVisible && <PopQuiz onComplete={handlePopQuizComplete} />}
