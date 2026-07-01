@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { CamelliaLogoSmall } from './CamelliaLogo';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDarkMode, DarkModeToggle } from '@/lib/DarkModeContext';
@@ -147,7 +147,7 @@ export default function LandingPage({ onCreateAccount }) {
               onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px) scale(1.04)'; e.currentTarget.style.boxShadow = '0 16px 40px rgba(123,45,110,0.6)'; }}
               onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 8px 32px rgba(123,45,110,0.45)'; }}
             >
-              {isReturning ? 'Continue Studying ↵' : 'Create a Study Session ↵'}
+              {isReturning ? 'Continue Studying ↵' : 'Get Started! ↵'}
             </button>
           </div>
 
@@ -165,14 +165,24 @@ export default function LandingPage({ onCreateAccount }) {
             <strong>I am not like them.</strong> Camellia is designed to understand the student. I am tired of websites that just stuff me with flashcards or quizzes, then proceed to ask me for an absurd amount of money just so I can have access to basic AI features. So I built Camellia. Camellia is a study website that analyzes all your upcoming exams, then uses AI to build study plans that actually work, all according to your studying style and weaknesses, as well as exam dates. All for free. Because studying tools SHOULD be accessible to all people and backgrounds. If It takes no cost for me to run this, nobody should ever pay.
           </p>
         </div>
-        {/* Right: laptop mockup */}
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        {/* Right: laptop mockup — showcase only, not interactive */}
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+          <span style={{
+            position: 'absolute', top: -14, right: '50%', transform: 'translateX(50%)', zIndex: 3,
+            background: dark ? 'rgba(80,20,140,0.55)' : 'rgba(255,255,255,0.55)',
+            backdropFilter: 'blur(14px) saturate(160%)', WebkitBackdropFilter: 'blur(14px) saturate(160%)',
+            border: dark ? '1px solid rgba(180,80,255,0.4)' : '1px solid rgba(255,255,255,0.6)',
+            borderRadius: 20, padding: '4px 14px', fontFamily: 'Roboto, sans-serif', fontSize: '0.68rem', fontWeight: 700,
+            color: dark ? '#e8d5ff' : '#5A1A40', whiteSpace: 'nowrap',
+          }}>Feature Showcase</span>
           <div style={{
             width: '100%', maxWidth: 420,
             background: '#1a1a2e', borderRadius: 16,
             padding: '10px 10px 6px',
             boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
+            pointerEvents: 'none', position: 'relative', overflow: 'hidden',
           }}>
+            <div style={{ position: 'absolute', inset: 0, zIndex: 2, background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(0.5px)' }} />
             {/* Screen chrome */}
             <div style={{ background: dark ? '#1a1020' : '#F5EDE0', borderRadius: 10, overflow: 'hidden', minHeight: 260, display: 'flex' }}>
               {/* Mini sidebar */}
@@ -244,8 +254,16 @@ export default function LandingPage({ onCreateAccount }) {
 
       {/* LAZER FOCUSED SECTION */}
       <section style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 40, padding: '60px 60px', alignItems: 'center', background: 'rgba(255,255,255,0.08)' }}>
-        {/* Left: pop quiz + planner mockups */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Left: pop quiz + planner mockups — showcase only, not interactive */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, position: 'relative', pointerEvents: 'none' }}>
+          <span style={{
+            position: 'absolute', top: -14, left: 12, zIndex: 3,
+            background: dark ? 'rgba(80,20,140,0.55)' : 'rgba(255,255,255,0.65)',
+            backdropFilter: 'blur(14px) saturate(160%)', WebkitBackdropFilter: 'blur(14px) saturate(160%)',
+            border: dark ? '1px solid rgba(180,80,255,0.4)' : '1px solid rgba(255,255,255,0.6)',
+            borderRadius: 20, padding: '4px 14px', fontFamily: 'Roboto, sans-serif', fontSize: '0.68rem', fontWeight: 700,
+            color: dark ? '#e8d5ff' : '#5A1A40',
+          }}>Feature Showcase</span>
           {/* Pop quiz mockup */}
           <div style={{ background: '#FDECC8', borderRadius: 12, padding: '16px 20px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
             <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#2D1B0E', marginBottom: 8, lineHeight: 1.5, textAlign: 'center', fontFamily: 'Roboto, sans-serif' }}>
@@ -335,8 +353,16 @@ export default function LandingPage({ onCreateAccount }) {
 
       {/* 4 STUDY METHODS SECTION */}
       <section style={{ padding: '60px 60px', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 60, alignItems: 'center', background: dark ? 'rgba(60,10,100,0.2)' : 'rgba(200,80,40,0.07)' }}>
-        {/* Active Recall mockup */}
-        <div style={{ background: dark ? '#1a0a2e' : 'white', borderRadius: 12, overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.25)' }}>
+        {/* Active Recall mockup — showcase only, not interactive */}
+        <div style={{ background: dark ? '#1a0a2e' : 'white', borderRadius: 12, overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.25)', position: 'relative', pointerEvents: 'none' }}>
+          <span style={{
+            position: 'absolute', top: 10, right: 10, zIndex: 3,
+            background: dark ? 'rgba(80,20,140,0.55)' : 'rgba(255,255,255,0.7)',
+            backdropFilter: 'blur(14px) saturate(160%)', WebkitBackdropFilter: 'blur(14px) saturate(160%)',
+            border: dark ? '1px solid rgba(180,80,255,0.4)' : '1px solid rgba(0,0,0,0.08)',
+            borderRadius: 20, padding: '4px 14px', fontFamily: 'Roboto, sans-serif', fontSize: '0.68rem', fontWeight: 700,
+            color: dark ? '#e8d5ff' : '#5A1A40',
+          }}>Feature Showcase</span>
           <div style={{ background: dark ? '#120a1e' : '#F2EAE0', padding: '10px 16px', display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', borderBottom: dark ? '1px solid rgba(90,40,130,0.4)' : '1px solid #E5D8C8' }}>
             <div style={{ display: 'flex', gap: 8 }}>
               {['Tutorial', 'Notebook 1', 'Recall 1', '+'].map(t => (
@@ -460,7 +486,7 @@ Congrats! You've learned active recall.`}</p>
               picture of my desk, and the lovely Chromebook screen I broke during Geo - interested in donating a Mac for me :)
             </p>
             <img
-              src="https://media.base44.com/images/public/6a36d7f24a9a8c3a2c9b47d9/60c05077f_image.png"
+              src="https://media.base44.com/images/public/6a36d7f24a9a8c3a2c9b47d9/3ec1eb8da_IMG_8726.jpg"
               alt="random capybara"
               style={{ width: isMobile ? '100%' : 320, borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.2)', objectFit: 'cover', display: 'block', marginTop: 12 }}
             />
@@ -490,7 +516,7 @@ Congrats! You've learned active recall.`}</p>
           onMouseDown={e => { e.currentTarget.style.transform = 'translateY(0) scale(0.98)'; }}
           onMouseUp={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.03)'; }}
         >
-          {isReturning ? 'Continue Studying ↵' : 'Create a Study Session ↵'}
+          {isReturning ? 'Continue Studying ↵' : 'Get Started! ↵'}
         </button>
       </section>
 
